@@ -1,0 +1,6 @@
+smtp:
+  host: 172.18.0.6
+  port: 27017
+  sender_email: "admin"
+  sender_password: "vxjd hcjd kmrb tpsa"
+  subject: "WearablePerMed Predictor"
