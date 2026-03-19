@@ -2,25 +2,22 @@ import os
 import sys
 import argparse
 import logging
-from pathlib import Path
 import joblib
-from pyaml_env import parse_config
 import json
 import smtplib
+import numpy as np
+from pathlib import Path
+from pyaml_env import parse_config
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
-import predictor
+import predictor_characteristics
 
-__author__ = "Miguel Salinas Gancedo"
-__copyright__ = "Miguel Salinas Gancedo"
+__author__ = "Miguel Angel Salinas Gancedo<uo34525@uniovi.es>, Alejandro Castellanos Alonso<uo265351@uniovi.es>, Antonio Miguel López Rodriguez<amlopez@uniovi.es>"
+__copyright__ = "Uniovi"
 __license__ = "MIT"
 
 _logger = logging.getLogger(__name__)
-
-
-def argument_spaces(arg):
-    return arg.split(',')
 
 def parse_args(args):   
     """Parse command line parameters
@@ -36,21 +33,30 @@ def parse_args(args):
     parser.add_argument(
         "-resource-id",
         "--resource-id",
+        required=True,
         dest="resource_id",
-        help="Resource Id"
-    )
+        help="resource file [csv]"
+    )    
     parser.add_argument(
         "-model-id",
         "--model-id",
+        required=True,
         dest="model_id",
         help="Model Id"
     )
     parser.add_argument(
-        "-resource-file",
-        "--resource-file",
-        dest="resource_file",
-        help="resource file [csv]"
-    )    
+        "-label-id",
+        "--label-id",
+        dest="label_id",
+        help="Label Id"
+    )
+    parser.add_argument(
+        "-prediction-format",
+        "--prediction-format",
+        default="npz",
+        dest="prediction_format",
+        help="prediction format"
+    )     
     parser.add_argument(
         "-user-email",
         "--user-email",
@@ -87,12 +93,6 @@ def setup_logging(loglevel):
         level=loglevel, stream=sys.stdout, format=logformat, datefmt="%Y-%m-%d %H:%M:%S"
     )
 
-def predict_by_mock(config, resource_file):
-    # Create a list of mock Prediction objects
-    mock_prediction = {}
-
-    return mock_prediction
-
 def load_model(model_id, base_path):
     # 1. Reconstruct the exact same path used in store()
     file_path = os.path.join(base_path, 'models', model_id)
@@ -104,10 +104,25 @@ def load_model(model_id, base_path):
         return model
     else:
         print("Error: Model file not found.")
+
         return None
 
-def predict_by_resource(resource_file, model_id):    
-    predictions = predictor.predict(resource_file, model_id)
+def load_labels(label_id, base_path):
+    # 1. Reconstruct the exact same path used in store()
+    file_path = os.path.join(base_path, 'models', label_id)
+    
+    # 2. Load the model from the disk
+    if os.path.exists(file_path):
+        labels = joblib.load(file_path)
+
+        return labels
+    else:
+        print("Error: Labels file not found.")
+
+        return None
+
+def predict_by_resource(resource_id, model_id, predictor_label_encoder):    
+    predictions = predictor_characteristics.predict(resource_id, model_id, predictor_label_encoder)
 
     return predictions
 
@@ -152,7 +167,9 @@ def main(args):
     # get service arguments
     base_file = Path(__file__).resolve().parent.parent.parent
     model_id = args.model_id    
-    resource_file = args.resource_file
+    label_id = args.label_id
+    resource_id = args.resource_id
+    prediction_format = args.prediction_format
     user_email = args.user_email
 
     # get job active profile            
@@ -165,24 +182,29 @@ def main(args):
     _logger.info("STEP02: Loading predictor model")
     predictor_model = load_model(model_id, base_file)
 
-    # STEP03: get predictions from resource id
-    _logger.info("STEP03: Get predictions from model id %s ", model_id)
-    predictions = predict_by_resource(resource_file, predictor_model)
+    if (label_id is not None):
+        predictor_labels = load_labels(label_id, base_file)
 
-    #print(f"The predictions are: {predictions}")
+    # STEP03: get predictions from resource id
+    _logger.info(f"STEP03: Get predictions from model id {model_id} with label id {label_id}")
+    predictions = predict_by_resource(resource_id, predictor_model, predictor_labels)
+
+    print(f"Prediction for a total of: {str(len(predictions))} items")
 
     # STEP04: save resource predictions
-    result_path = base_file / "results" / "predictions.json"
-
-    with open(result_path, "w", encoding="utf-8") as f:
-        json.dump(predictions, f, indent=4)
+    if prediction_format == "npz":
+        result_path = base_file / "results" / "predictions.npz"
+        np.savez(result_path, 'models/predicted_labels.npz', predictions)
+    else:
+        result_path = base_file / "results" / "predictions.csv"
+        np.savetxt(result_path, predictions, fmt='%s', delimiter=',', header='label', comments='')                
 
     print(f"File saved successfully at: {result_path.name}")
 
     # STEP05: send email to user
     if (user_email is not None):
         _logger.info("STEP05: Send email for user email %s ", user_email)
-        send_email(args, config, resource_file, user_email)
+        send_email(args, config, resource_id, user_email)
 
         print(f"Email sent to: {user_email}")
 
