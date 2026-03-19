@@ -5,11 +5,12 @@ import logging
 from pathlib import Path
 import joblib
 from pyaml_env import parse_config
+import json
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
-from wearablepermed_pipeline import pipeline
+import predictor
 
 __author__ = "Miguel Salinas Gancedo"
 __copyright__ = "Miguel Salinas Gancedo"
@@ -106,8 +107,7 @@ def load_model(model_id, base_path):
         return None
 
 def predict_by_resource(resource_file, model_id):    
-    predictions = []
-    #predictions = predict(prediction_file, resource_file)
+    predictions = predictor.predict(resource_file, model_id)
 
     return predictions
 
@@ -146,6 +146,9 @@ def main(args):
     args = parse_args(args)
     setup_logging(args.loglevel)
     
+    # STEP01: get predictions from resource id
+    _logger.info("STEP01: Loading arguments")
+
     # get service arguments
     base_file = Path(__file__).resolve().parent.parent.parent
     model_id = args.model_id    
@@ -158,19 +161,30 @@ def main(args):
     else:
         config = parse_config('./src/wearablepermed_predictor/environment/environment-' + os.getenv('ARG_PYTHON_PROFILES_ACTIVE') + '.yaml')
 
-    _logger.info("Starting predictor")
-
-    predictor = load_model(model_id, base_file)
+    # STEP02: Loading predictor model
+    _logger.info("STEP02: Loading predictor model")
+    predictor_model = load_model(model_id, base_file)
 
     # STEP03: get predictions from resource id
     _logger.info("STEP03: Get predictions from model id %s ", model_id)
-    predictions = predict_by_resource(resource_file, model_id)
+    predictions = predict_by_resource(resource_file, predictor_model)
+
+    #print(f"The predictions are: {predictions}")
 
     # STEP04: save resource predictions
+    result_path = base_file / "results" / "predictions.json"
 
-    # STEP05: send email to sender user
-    _logger.info("STEP05: Send email for user email %s ", user_email)
-    send_email(args, config, resource_file, user_email)
+    with open(result_path, "w", encoding="utf-8") as f:
+        json.dump(predictions, f, indent=4)
+
+    print(f"File saved successfully at: {result_path.name}")
+
+    # STEP05: send email to user
+    if (user_email is not None):
+        _logger.info("STEP05: Send email for user email %s ", user_email)
+        send_email(args, config, resource_file, user_email)
+
+        print(f"Email sent to: {user_email}")
 
     _logger.info("Predictor finalized")
 
