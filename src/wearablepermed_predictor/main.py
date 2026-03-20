@@ -9,7 +9,7 @@ from pathlib import Path
 
 from wearablepermed_predictor.core import predict
 
-__author__ = "Miguel Angel Salinas Gancedo<uo34525@uniovi.es>, Alejandro Castellanos Alonso<uo265351@uniovi.es>, Antonio Miguel López Rodriguez<amlopez@uniovi.es>"
+__author__ = "Miguel Angel Salinas Gancedo<uo34525@uniovi.es>, Antonio Miguel López Rodriguez<amlopez@uniovi.es>"
 __copyright__ = "Uniovi"
 __license__ = "MIT"
 
