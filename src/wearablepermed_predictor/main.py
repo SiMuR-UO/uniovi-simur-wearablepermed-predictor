@@ -3,13 +3,11 @@ import sys
 import argparse
 import logging
 import joblib
-import json
 import smtplib
 import numpy as np
+import pandas as pd
 from pathlib import Path
 from pyaml_env import parse_config
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
 
 import predictor_characteristics
 
@@ -56,13 +54,7 @@ def parse_args(args):
         default="npz",
         dest="prediction_format",
         help="prediction format"
-    )     
-    parser.add_argument(
-        "-user-email",
-        "--user-email",
-        dest="user_email",
-        help="User email"
-    )               
+    )             
     parser.add_argument(
         "-v",
         "--verbose",
@@ -126,36 +118,6 @@ def predict_by_resource(resource_id, model_id, predictor_label_encoder):
 
     return predictions
 
-def send_email(args, config, resource_path, receiver_email):
-    # SMTP server config
-    smtp_host = config.host
-    smtp_port = config.port
-    sender_email = config.sender_email
-    password = config.sender_password
-
-    # Create the email
-    msg = MIMEMultipart()
-    msg["From"] = sender_email
-    msg["To"] = receiver_email
-    msg["Subject"] = config.subject
-
-    # Email body
-    body = f"<p>The predictions for your resource {args.resource_id} has been resolved</p>"
-    msg.attach(MIMEText(body, "html"))
-
-    try:
-        # Connect to the server
-        server = smtplib.SMTP(smtp_host, smtp_port)
-        server.starttls()  # Secure the connection
-        server.login(sender_email, password)
-        server.send_message(msg)
-
-        print("✅ Email sent successfully!")
-    except Exception as e:
-        print(f"❌ Error: {e}")
-    finally:
-        server.quit()
-
 def main(args):
     # get arguments and configure app logger
     args = parse_args(args)
@@ -166,17 +128,11 @@ def main(args):
 
     # get service arguments
     base_file = Path(__file__).resolve().parent.parent.parent
+
     model_id = args.model_id    
     label_id = args.label_id
     resource_id = args.resource_id
     prediction_format = args.prediction_format
-    user_email = args.user_email
-
-    # get job active profile            
-    if not os.getenv('ARG_PYTHON_PROFILES_ACTIVE'):
-        config = parse_config('./src/wearablepermed_predictor/environment/environment.yaml')        
-    else:
-        config = parse_config('./src/wearablepermed_predictor/environment/environment-' + os.getenv('ARG_PYTHON_PROFILES_ACTIVE') + '.yaml')
 
     # STEP02: Loading predictor model
     _logger.info("STEP02: Loading predictor model")
@@ -194,19 +150,23 @@ def main(args):
     # STEP04: save resource predictions
     if prediction_format == "npz":
         result_path = base_file / "results" / "predictions.npz"
-        np.savez(result_path, 'models/predicted_labels.npz', predictions)
+
+        np.savez_compressed(
+            result_path, 
+            timestamp=predictions[:,0], 
+            label=predictions[:,1]
+        )
     else:
         result_path = base_file / "results" / "predictions.csv"
-        np.savetxt(result_path, predictions, fmt='%s', delimiter=',', header='label', comments='')                
+
+        df = pd.DataFrame({
+            'timestamp': predictions[:,0],
+            'label': predictions[:,1]
+        })
+
+        df.to_csv(result_path, index=False)
 
     print(f"File saved successfully at: {result_path.name}")
-
-    # STEP05: send email to user
-    if (user_email is not None):
-        _logger.info("STEP05: Send email for user email %s ", user_email)
-        send_email(args, config, resource_id, user_email)
-
-        print(f"Email sent to: {user_email}")
 
     _logger.info("Predictor finalized")
 
