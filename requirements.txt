@@ -20,7 +20,6 @@ patsy==1.0.1
 pillow==11.3.0
 platformdirs==4.4.0
 pluggy==1.6.0
-pyaml_env==1.2.2
 pyparsing==3.2.4
 pyproject-api==1.9.1
 pyproject_hooks==1.2.0

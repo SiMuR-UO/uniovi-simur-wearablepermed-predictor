@@ -3,19 +3,29 @@ import sys
 import argparse
 import logging
 import joblib
-import smtplib
 import numpy as np
 import pandas as pd
 from pathlib import Path
-from pyaml_env import parse_config
 
-import predictor_characteristics
+from wearablepermed_predictor.core import predict
 
 __author__ = "Miguel Angel Salinas Gancedo<uo34525@uniovi.es>, Alejandro Castellanos Alonso<uo265351@uniovi.es>, Antonio Miguel López Rodriguez<amlopez@uniovi.es>"
 __copyright__ = "Uniovi"
 __license__ = "MIT"
 
 _logger = logging.getLogger(__name__)
+
+class ValidateSegments(argparse.Action):
+    def __call__(self, parser, namespace, values, option_string=None):
+        # 1. Check for duplicates
+        if len(values) != len(set(values)):
+            raise argparse.ArgumentError(self, f"Duplicate values found in {values}")
+        
+        # 2. Check maximum length
+        if len(values) > 3:
+            raise argparse.ArgumentError(self, f"Too many segments. Max is 3, you provided {len(values)}")
+        
+        setattr(namespace, self.dest, values)
 
 def parse_args(args):   
     """Parse command line parameters
@@ -29,10 +39,20 @@ def parse_args(args):
     """
     parser = argparse.ArgumentParser(description="Predictor Job")
     parser.add_argument(
-        "-resource-id",
-        "--resource-id",
+        '-segment-body', 
+        '--segment-body', 
+        dest="segment_body",
+        nargs='+',                         # Accepts 1 or more arguments
+        choices=['Thigh', 'Wrist', 'Hip'], # Restricted collection
+        action=ValidateSegments,           # Runs our custom validation logic
+        required=True,                     # Ensures at least 1 is provided
+        help="Body segments to process. Choices: wrist, thigh, hip (Max 3, no repeats)."
+    )    
+    parser.add_argument(
+        "-resource-id-file",
+        "--resource-id-file",
         required=True,
-        dest="resource_id",
+        dest="resource_id_file",
         help="resource file [csv]"
     )    
     parser.add_argument(
@@ -49,12 +69,19 @@ def parse_args(args):
         help="Label Id"
     )
     parser.add_argument(
-        "-prediction-format",
-        "--prediction-format",
+        "-prediction-file-format",
+        "--prediction-file-format",
         default="npz",
-        dest="prediction_format",
-        help="prediction format"
-    )             
+        dest="prediction_file_format",
+        help="prediction file_format"
+    )
+    parser.add_argument(
+        "-prediction-id-folder",
+        "--prediction-id-folder",
+        required=True,
+        dest="prediction_id_folder",
+        help="Predictions folder results"
+    )                  
     parser.add_argument(
         "-v",
         "--verbose",
@@ -113,8 +140,8 @@ def load_labels(label_id, base_path):
 
         return None
 
-def predict_by_resource(resource_id, model_id, predictor_label_encoder):    
-    predictions = predictor_characteristics.predict(resource_id, model_id, predictor_label_encoder)
+def predict_by_resource(segment_body, resource_id_file, model_id, predictor_label_encoder):    
+    predictions = predict(segment_body, resource_id_file, model_id, predictor_label_encoder)
 
     return predictions
 
@@ -123,33 +150,40 @@ def main(args):
     args = parse_args(args)
     setup_logging(args.loglevel)
     
+    if len(args.segment_body) > 1:
+        _logger.error("Predictor is not implemented to use more than one segment body using fusion models")    
+        return
+
     # STEP01: get predictions from resource id
     _logger.info("STEP01: Loading arguments")
 
     # get service arguments
     base_file = Path(__file__).resolve().parent.parent.parent
 
+    segment_body = args.segment_body    
     model_id = args.model_id    
     label_id = args.label_id
-    resource_id = args.resource_id
-    prediction_format = args.prediction_format
+    resource_id_file = args.resource_id_file
+    prediction_id_folder = args.prediction_id_folder    
+    prediction_file_format = args.prediction_file_format
 
-    # STEP02: Loading predictor model
+    # STEP02: Loading predictor model and labels if exist
     _logger.info("STEP02: Loading predictor model")
     predictor_model = load_model(model_id, base_file)
 
+    predictor_labels = None
     if (label_id is not None):
         predictor_labels = load_labels(label_id, base_file)
 
     # STEP03: get predictions from resource id
     _logger.info(f"STEP03: Get predictions from model id {model_id} with label id {label_id}")
-    predictions = predict_by_resource(resource_id, predictor_model, predictor_labels)
+    predictions = predict_by_resource(segment_body, resource_id_file, predictor_model, predictor_labels)
 
     print(f"Prediction for a total of: {str(len(predictions))} items")
 
     # STEP04: save resource predictions
-    if prediction_format == "npz":
-        result_path = base_file / "results" / "predictions.npz"
+    if prediction_file_format == "npz":
+        result_path = Path(prediction_id_folder) / "prediction.npz"
 
         np.savez_compressed(
             result_path, 
@@ -157,7 +191,7 @@ def main(args):
             label=predictions[:,1]
         )
     else:
-        result_path = base_file / "results" / "predictions.csv"
+        result_path = Path(prediction_id_folder) / "prediction.csv"
 
         df = pd.DataFrame({
             'timestamp': predictions[:,0],
