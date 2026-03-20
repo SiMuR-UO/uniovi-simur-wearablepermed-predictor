@@ -1,0 +1,6 @@
+.tox
+.venv
+.vscode
+data
+dist
+results

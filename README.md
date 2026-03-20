@@ -20,6 +20,62 @@ A longer description of your project goes here...
 
 
 <!-- pyscaffold-notes -->
+## Excute from docker
+You must to be install docker previos to use this image
+
+```bash
+$ docker run \
+--rm \
+--name prediction-by-rf-model \
+-u $(id -u):$(id -g) \
+-v <PREDICTOR_FOLDER>/data:/data \
+-v <PREDICTOR_FOLDER>/results:/results \
+wearablepermed-predictor:1.6.0 \
+--segment-body Thigh \
+--model-id MODEL_PI_RF_ACC_GYR_15 \
+--resource-id /data/PMP1024_W1_PI_1.csv \
+--prediction-id-folder /results
+```
+
+Where <PREDICTOR_FOLDER> is any absolute path in your computer. Is recomendable and not mandatory create inside this one, three subfolder called: models, data and results:
+- models: subfolder where locate your npz models to be used by predictor.
+- data: subfolder where locate your segment body signal files to be predict in csv format.
+- results: subfolder where the model create the prediction files in format csv or npz.
+
+## Predictor Arguments 
+
+- **resource-id-file (*)** : segment body file in csv format with acceleromter and gyroscope come from MATRIX sensors.
+
+- **model-id (*)** : is the model key to be used for prediction. **The actual implementation only support RandomForest Individual models**.
+
+- **is-label-text**: this is a optional boolean argument. By default is False, but when set True the predictions are string values not numerical.
+
+- **prediction-id-folder (*)**: the folder where the predictor will create the prediction file.
+
+- **prediction-file-format**: optional file prediction format used to be return. By default npz is selected. You can pass these values: [npz, csv]
+
+(*) are mandatory arguments
+
+If you want go into the container execute this command.
+
+```bash
+$ docker run \
+--rm \
+-it \
+--name prediction-by-rf-model \
+-u $(id -u):$(id -g) \
+-v /home/miguel/git/uniovi/simur/uniovi-simur-wearablepermed-predictor/data:/data \
+-v /home/miguel/temp/predictor/results:/results \
+--entrypoint sh \
+wearablepermed-predictor:1.6.0
+```
+
+## Default Value
+
+All models offered by preeictor are trained with
+
+- Window size of 250 and overlapping of 50%.
+- Right now only individual models are offered by predc¡ictor: Wrist, Thigh or Hip segment bodies.
 
 ## Note
 

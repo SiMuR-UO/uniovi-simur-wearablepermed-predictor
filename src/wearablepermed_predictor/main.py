@@ -27,6 +27,49 @@ class ValidateSegments(argparse.Action):
         
         setattr(namespace, self.dest, values)
 
+# Your Collection of Objects (Source of Truth)
+MODELS_CONFIG = [
+    {
+        'key': 'MODEL_PI_RF_ACC_GYR_15',
+        'path': 'case_PI_BRF_acc_gyr_15_classes',
+        'segment_body': 'Thigh',
+        'help': 'Individual RandomForest Model for thigh with accelerometer and gyroscope for 15 classes'
+    },
+    {
+        'key': 'MODEL_M_RF_ACC_GYR_15',
+        'path': 'case_W_BRF_acc_gyr_15_classes',
+        'segment_body': 'Wrist',
+        'help': 'Individual RandomForest Model for wrist with accelerometer and gyroscope for 15 classes'
+    },
+    {
+        'key': 'MODEL_C_RF_ACC_GYR_15',
+        'path': 'case_C_BRF_acc_gyr_15_classes',
+        'segment_body': 'hip',
+        'help': 'Individual RandomForest Model for hip with accelerometer and gyroscope for 15 classes'
+    }    
+]
+
+# Helper to get keys for argparse choices
+MODEL_LOOKUP = {m['key']: m for m in MODELS_CONFIG}
+
+def model_object_type(selection):
+    """Custom type function for argparse to return the full object"""
+    if selection in MODEL_LOOKUP:
+        return MODEL_LOOKUP[selection]
+
+    # This part handles the error message if the user types something wrong
+    raise argparse.ArgumentTypeError(f"Invalid model key: '{selection}'. Choose from {list(MODEL_LOOKUP.keys())}")
+
+def str2bool(v):
+    if isinstance(v, bool):
+        return v
+    if v.lower() in ('yes', 'true', 't', 'y', '1'):
+        return True
+    elif v.lower() in ('no', 'false', 'f', 'n', '0'):
+        return False
+    else:
+        raise argparse.ArgumentTypeError('Boolean value expected.')
+
 def parse_args(args):   
     """Parse command line parameters
 
@@ -37,17 +80,17 @@ def parse_args(args):
     Returns:
       :obj:`argparse.Namespace`: command line parameters namespace
     """
-    parser = argparse.ArgumentParser(description="Predictor Job")
+    parser = argparse.ArgumentParser(description="Predictor Service")
     parser.add_argument(
-        '-segment-body', 
-        '--segment-body', 
-        dest="segment_body",
-        nargs='+',                         # Accepts 1 or more arguments
-        choices=['Thigh', 'Wrist', 'Hip'], # Restricted collection
-        action=ValidateSegments,           # Runs our custom validation logic
-        required=True,                     # Ensures at least 1 is provided
-        help="Body segments to process. Choices: wrist, thigh, hip (Max 3, no repeats)."
-    )    
+        '-model-id',
+        '--model-id',
+        type=model_object_type,
+        choices=list(MODEL_LOOKUP.values()), # We pass objects, but argparse uses their str() for help
+        metavar="MODEL_KEY",
+        required=True,
+        dest="model_id",        
+        help="The unique ID of the model to load."
+    )   
     parser.add_argument(
         "-resource-id-file",
         "--resource-id-file",
@@ -56,18 +99,15 @@ def parse_args(args):
         help="resource file [csv]"
     )    
     parser.add_argument(
-        "-model-id",
-        "--model-id",
-        required=True,
-        dest="model_id",
-        help="Model Id"
-    )
-    parser.add_argument(
-        "-label-id",
-        "--label-id",
-        dest="label_id",
-        help="Label Id"
-    )
+        '-is-label-text',
+        '--is-label-text',
+        type=str2bool,
+        nargs='?', # Allows the flag to be used without a value
+        const=True, # Value used if flag is present but no value given
+        default=False,
+        dest="is_label_text",
+        help="Specify if labels are text (True/False). Default is False."
+    )    
     parser.add_argument(
         "-prediction-file-format",
         "--prediction-file-format",
@@ -112,13 +152,13 @@ def setup_logging(loglevel):
         level=loglevel, stream=sys.stdout, format=logformat, datefmt="%Y-%m-%d %H:%M:%S"
     )
 
-def load_model(model_id, base_path):
+def load_model(base_path, model_type):
     # 1. Reconstruct the exact same path used in store()
-    file_path = os.path.join(base_path, 'models', model_id)
+    model_path = os.path.join(base_path, 'models', model_type, 'RandomForest.pkl')
     
     # 2. Load the model from the disk
-    if os.path.exists(file_path):
-        model = joblib.load(file_path)
+    if os.path.exists(model_path):
+        model = joblib.load(model_path)
 
         return model
     else:
@@ -126,15 +166,15 @@ def load_model(model_id, base_path):
 
         return None
 
-def load_labels(label_id, base_path):
+def load_labels(base_path, model_type):
     # 1. Reconstruct the exact same path used in store()
-    file_path = os.path.join(base_path, 'models', label_id)
+    label_path = os.path.join(base_path, 'models', model_type, 'label_encoder.pkl')
     
     # 2. Load the model from the disk
-    if os.path.exists(file_path):
-        labels = joblib.load(file_path)
+    if os.path.exists(label_path):
+        label = joblib.load(label_path)
 
-        return labels
+        return label
     else:
         print("Error: Labels file not found.")
 
@@ -150,34 +190,29 @@ def main(args):
     args = parse_args(args)
     setup_logging(args.loglevel)
     
-    if len(args.segment_body) > 1:
-        _logger.error("Predictor is not implemented to use more than one segment body using fusion models")    
-        return
-
     # STEP01: get predictions from resource id
     _logger.info("STEP01: Loading arguments")
 
     # get service arguments
-    base_file = Path(__file__).resolve().parent.parent.parent
+    base_path = Path(__file__).resolve().parent.parent.parent
 
-    segment_body = args.segment_body    
-    model_id = args.model_id    
-    label_id = args.label_id
+    model_id = args.model_id
     resource_id_file = args.resource_id_file
     prediction_id_folder = args.prediction_id_folder    
     prediction_file_format = args.prediction_file_format
+    is_label_text = args.is_label_text
 
     # STEP02: Loading predictor model and labels if exist
     _logger.info("STEP02: Loading predictor model")
-    predictor_model = load_model(model_id, base_file)
+    predictor_model = load_model(base_path, model_id['path'])
 
     predictor_labels = None
-    if (label_id is not None):
-        predictor_labels = load_labels(label_id, base_file)
+    if is_label_text == True:
+        predictor_labels = load_labels(base_path, model_id['path'])
 
     # STEP03: get predictions from resource id
-    _logger.info(f"STEP03: Get predictions from model id {model_id} with label id {label_id}")
-    predictions = predict_by_resource(segment_body, resource_id_file, predictor_model, predictor_labels)
+    _logger.info(f"STEP03: Get predictions from model type {model_id['key']}")
+    predictions = predict_by_resource([model_id['segment_body']], resource_id_file, predictor_model, predictor_labels)
 
     print(f"Prediction for a total of: {str(len(predictions))} items")
 
