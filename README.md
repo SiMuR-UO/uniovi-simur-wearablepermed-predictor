@@ -60,7 +60,7 @@ $ docker run \
 -v /home/miguel/temp/sample/data/PMP1024_W1_PI_1.csv:/home/miguel/temp/sample/data/PMP1024_W1_PI_1.csv \
 -v /home/miguel/temp/sample/results:/home/miguel/temp/sample/results \
 --entrypoint sh \
-simuruo/wearablepermed-predictor:1.8.0 \
+simuruo/wearablepermed-predictor:1.8.0
 ```
 
 ## Default Value
