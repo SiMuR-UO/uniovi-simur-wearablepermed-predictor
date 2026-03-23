@@ -18,7 +18,6 @@
 
 A longer description of your project goes here...
 
-
 <!-- pyscaffold-notes -->
 ## Excute from docker
 You must to be install docker previos to use this image
@@ -26,33 +25,28 @@ You must to be install docker previos to use this image
 ```bash
 $ docker run \
 --rm \
---name prediction-by-rf-model \
 -u $(id -u):$(id -g) \
--v <PREDICTOR_FOLDER>/data:/data \
--v <PREDICTOR_FOLDER>/results:/results \
-wearablepermed-predictor:1.6.0 \
---segment-body Thigh \
+-v /home/miguel/temp/sample/data/PMP1024_W1_PI_1.csv:/home/miguel/temp/sample/data/PMP1024_W1_PI_1.csv \
+-v /home/miguel/temp/sample/results:/home/miguel/temp/sample/results \
+simuruo/wearablepermed-predictor:1.8.0 \
 --model-id MODEL_PI_RF_ACC_GYR_15 \
---resource-id /data/PMP1024_W1_PI_1.csv \
---prediction-id-folder /results
+--resource-id "/home/miguel/temp/sample/data/PMP1024_W1_PI_1.csv" \
+--prediction-folder "/home/miguel/temp/sample/results"
 ```
-
-Where <PREDICTOR_FOLDER> is any absolute path in your computer. Is recomendable and not mandatory create inside this one, three subfolder called: models, data and results:
-- models: subfolder where locate your npz models to be used by predictor.
-- data: subfolder where locate your segment body signal files to be predict in csv format.
-- results: subfolder where the model create the prediction files in format csv or npz.
 
 ## Predictor Arguments 
 
-- **resource-id-file (*)** : segment body file in csv format with acceleromter and gyroscope come from MATRIX sensors.
+- **model-id (*)** : model key to be used for prediction. Possible values are: [MODEL_PI_RF_ACC_GYR_15, MODEL_M_RF_ACC_GYR_15, MODEL_C_RF_ACC_GYR_15]
 
-- **model-id (*)** : is the model key to be used for prediction. **The actual implementation only support RandomForest Individual models**.
+- **resource-id (*)** : segment body file dataset in csv format.
 
-- **is-label-text**: this is a optional boolean argument. By default is False, but when set True the predictions are string values not numerical.
+- **prediction-folder (*)**: the folder where the predictor will create the prediction file.
 
-- **prediction-id-folder (*)**: the folder where the predictor will create the prediction file.
+- **prediction-file-format**: string argument used to create the prediction file. By default npz is selected. Possible values are: [npz, csv]
 
-- **prediction-file-format**: optional file prediction format used to be return. By default npz is selected. You can pass these values: [npz, csv]
+- **is-label-text**: boolean argument used to return prediction labels and not numbers by default. By default is False.
+
+- **v**: activate verbose results
 
 (*) are mandatory arguments
 
@@ -62,20 +56,55 @@ If you want go into the container execute this command.
 $ docker run \
 --rm \
 -it \
---name prediction-by-rf-model \
 -u $(id -u):$(id -g) \
--v /home/miguel/git/uniovi/simur/uniovi-simur-wearablepermed-predictor/data:/data \
--v /home/miguel/temp/predictor/results:/results \
+-v /home/miguel/temp/sample/data/PMP1024_W1_PI_1.csv:/home/miguel/temp/sample/data/PMP1024_W1_PI_1.csv \
+-v /home/miguel/temp/sample/results:/home/miguel/temp/sample/results \
 --entrypoint sh \
-wearablepermed-predictor:1.6.0
+simuruo/wearablepermed-predictor:1.8.0 \
 ```
 
 ## Default Value
 
-All models offered by preeictor are trained with
+All models offered by predictor are trained with
 
 - Window size of 250 and overlapping of 50%.
 - Right now only individual models are offered by predc¡ictor: Wrist, Thigh or Hip segment bodies.
+
+## Build and Publish in Pypi and Docker Hub
+1. Set the final version to the precitor python package from file `setup.cfg`
+
+     ```bash
+     version = 1.8.0
+     ```
+
+2. Set the new version in the shell scripts: `run_predictor.sh`, `run_predictor.bat`
+
+     Linux/Mac `run_predictor.sh` script:
+     ```bash
+     # --- CONFIGURATION (Change these) ---
+     PREDICTOR_VERSION="1.8.0"
+     ```
+
+     Windows `run_predictor.bat script:
+     ```bash
+     :: --- SYSTEM CONFIGURATION ---
+     set PREDICTOR_VERSION=1.8.0
+     ```
+3. Rebuild and publish package in Pypi repository (You must have credentials)
+
+     ```bash
+     $ tox -e clean
+     $ tox -e build
+     $ tox -e publish -- --repository pypi
+     ```
+
+4. Finally build docker image with the last version selected and publish in `simuruo` Docker Hub account (You must have credentials)
+
+     ```bash
+     $ docker build -t wearablepermed-predictor:1.8.0 .
+     $ docker tag wearablepermed-predictor:1.8.0 simuruo/wearablepermed-predictor:1.8.0
+     $ docker push simuruo/wearablepermed-predictor:1.8.0
+     ```
 
 ## Note
 

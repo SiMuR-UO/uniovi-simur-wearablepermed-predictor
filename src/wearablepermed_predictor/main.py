@@ -52,6 +52,8 @@ MODELS_CONFIG = [
 # Helper to get keys for argparse choices
 MODEL_LOOKUP = {m['key']: m for m in MODELS_CONFIG}
 
+available_models = ", ".join(MODEL_LOOKUP.keys())
+
 def model_object_type(selection):
     """Custom type function for argparse to return the full object"""
     if selection in MODEL_LOOKUP:
@@ -89,7 +91,7 @@ def parse_args(args):
         metavar="MODEL_KEY",
         required=True,
         dest="model_id",        
-        help="The unique ID of the model to load."
+        help=f"The unique ID of the model to load. Options: {available_models}"
     )   
     parser.add_argument(
         "-resource-id",
