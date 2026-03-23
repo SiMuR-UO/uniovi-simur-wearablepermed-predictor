@@ -33,19 +33,19 @@ MODELS_CONFIG = [
         'key': 'MODEL_PI_RF_ACC_GYR_15',
         'path': 'case_PI_BRF_acc_gyr_15_classes',
         'segment_body': 'Thigh',
-        'help': 'Individual RandomForest Model for thigh with accelerometer and gyroscope for 15 classes'
+        'help': 'Individual RandomForest Model for thigh with accelerometer, gyroscope and 15 classes'
     },
     {
         'key': 'MODEL_M_RF_ACC_GYR_15',
-        'path': 'case_W_BRF_acc_gyr_15_classes',
+        'path': 'case_M_BRF_acc_gyr_15_classes',
         'segment_body': 'Wrist',
-        'help': 'Individual RandomForest Model for wrist with accelerometer and gyroscope for 15 classes'
+        'help': 'Individual RandomForest Model for wrist with accelerometer, gyroscope and 15 classes'
     },
     {
         'key': 'MODEL_C_RF_ACC_GYR_15',
         'path': 'case_C_BRF_acc_gyr_15_classes',
         'segment_body': 'hip',
-        'help': 'Individual RandomForest Model for hip with accelerometer and gyroscope for 15 classes'
+        'help': 'Individual RandomForest Model for hip with accelerometer, gyroscope and 15 classes'
     }    
 ]
 
@@ -92,10 +92,10 @@ def parse_args(args):
         help="The unique ID of the model to load."
     )   
     parser.add_argument(
-        "-resource-id-file",
-        "--resource-id-file",
+        "-resource-id",
+        "--resource-id",
         required=True,
-        dest="resource_id_file",
+        dest="resource_id",
         help="resource file [csv]"
     )    
     parser.add_argument(
@@ -107,21 +107,21 @@ def parse_args(args):
         default=False,
         dest="is_label_text",
         help="Specify if labels are text (True/False). Default is False."
-    )    
+    )
+    parser.add_argument(
+        "-prediction-folder",
+        "--prediction-folder",
+        required=True,
+        dest="prediction_folder",
+        help="Predictions folder results"
+    )        
     parser.add_argument(
         "-prediction-file-format",
         "--prediction-file-format",
         default="npz",
         dest="prediction_file_format",
         help="prediction file_format"
-    )
-    parser.add_argument(
-        "-prediction-id-folder",
-        "--prediction-id-folder",
-        required=True,
-        dest="prediction_id_folder",
-        help="Predictions folder results"
-    )                  
+    )                 
     parser.add_argument(
         "-v",
         "--verbose",
@@ -180,8 +180,8 @@ def load_labels(base_path, model_type):
 
         return None
 
-def predict_by_resource(segment_body, resource_id_file, model_id, predictor_label_encoder):    
-    predictions = predict(segment_body, resource_id_file, model_id, predictor_label_encoder)
+def predict_by_resource(segment_body, resource_id, model_id, predictor_label_encoder):    
+    predictions = predict(segment_body, resource_id, model_id, predictor_label_encoder)
 
     return predictions
 
@@ -197,8 +197,8 @@ def main(args):
     base_path = Path(__file__).resolve().parent.parent.parent
 
     model_id = args.model_id
-    resource_id_file = args.resource_id_file
-    prediction_id_folder = args.prediction_id_folder    
+    resource_id = args.resource_id
+    prediction_folder = args.prediction_folder    
     prediction_file_format = args.prediction_file_format
     is_label_text = args.is_label_text
 
@@ -212,13 +212,13 @@ def main(args):
 
     # STEP03: get predictions from resource id
     _logger.info(f"STEP03: Get predictions from model type {model_id['key']}")
-    predictions = predict_by_resource([model_id['segment_body']], resource_id_file, predictor_model, predictor_labels)
+    predictions = predict_by_resource([model_id['segment_body']], resource_id, predictor_model, predictor_labels)
 
     print(f"Prediction for a total of: {str(len(predictions))} items")
 
     # STEP04: save resource predictions
     if prediction_file_format == "npz":
-        result_path = Path(prediction_id_folder) / "prediction.npz"
+        result_path = Path(prediction_folder) / "prediction.npz"
 
         np.savez_compressed(
             result_path, 
@@ -226,7 +226,7 @@ def main(args):
             label=predictions[:,1]
         )
     else:
-        result_path = Path(prediction_id_folder) / "prediction.csv"
+        result_path = Path(prediction_folder) / "prediction.csv"
 
         df = pd.DataFrame({
             'timestamp': predictions[:,0],
