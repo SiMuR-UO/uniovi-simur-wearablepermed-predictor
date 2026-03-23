@@ -46,7 +46,25 @@ MODELS_CONFIG = [
         'path': 'case_C_BRF_acc_gyr_15_classes',
         'segment_body': 'hip',
         'help': 'Individual RandomForest Model for hip with accelerometer, gyroscope and 15 classes'
-    }    
+    },
+    {
+        'key': 'MODEL_PI_RF_ACC_GYR_4',
+        'path': 'case_PI_BRF_acc_gyr_4_classes',
+        'segment_body': 'Thigh',
+        'help': 'Individual RandomForest Model for thigh with accelerometer, gyroscope and 4 classes'
+    },
+    {
+        'key': 'MODEL_M_RF_ACC_GYR_4',
+        'path': 'case_M_BRF_acc_gyr_4_classes',
+        'segment_body': 'Wrist',
+        'help': 'Individual RandomForest Model for wrist with accelerometer, gyroscope and 4 classes'
+    },
+    {
+        'key': 'MODEL_C_RF_ACC_GYR_4',
+        'path': 'case_C_BRF_acc_gyr_4_classes',
+        'segment_body': 'hip',
+        'help': 'Individual RandomForest Model for hip with accelerometer, gyroscope and 4 classes'
+    }        
 ]
 
 # Helper to get keys for argparse choices
