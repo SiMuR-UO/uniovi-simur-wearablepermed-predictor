@@ -102,6 +102,12 @@ def parse_args(args):
     """
     parser = argparse.ArgumentParser(description="Predictor Service")
     parser.add_argument(
+        '-models-base-path',
+        '--models-base-path',
+        dest="models_base_path",        
+        help=f"The models base path folder."
+    )    
+    parser.add_argument(
         '-model-id',
         '--model-id',
         type=model_object_type,
@@ -110,13 +116,7 @@ def parse_args(args):
         required=True,
         dest="model_id",        
         help=f"The model id to be load. Options: {available_models}"
-    )
-    parser.add_argument(
-        '-models-base-path',
-        '--models-base-path',
-        dest="models_base_path",        
-        help=f"The models base path folder."
-    )       
+    )     
     parser.add_argument(
         "-resource-id",
         "--resource-id",
