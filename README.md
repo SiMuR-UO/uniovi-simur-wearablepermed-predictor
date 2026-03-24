@@ -28,7 +28,7 @@ $ docker run \
 -u $(id -u):$(id -g) \
 -v /home/miguel/temp/sample/data/PMP1024_W1_PI_1.csv:/home/miguel/temp/sample/data/PMP1024_W1_PI_1.csv \
 -v /home/miguel/temp/sample/results:/home/miguel/temp/sample/results \
-simuruo/wearablepermed-predictor:1.8.0 \
+simuruo/wearablepermed-predictor:1.10.0 \
 --model-id MODEL_PI_RF_ACC_GYR_15 \
 --resource-id "/home/miguel/temp/sample/data/PMP1024_W1_PI_1.csv" \
 --prediction-folder "/home/miguel/temp/sample/results"
@@ -36,15 +36,17 @@ simuruo/wearablepermed-predictor:1.8.0 \
 
 ## Predictor Arguments 
 
-- **model-id (*)** : model key to be used for prediction. Possible values are: [MODEL_PI_RF_ACC_GYR_15, MODEL_M_RF_ACC_GYR_15, MODEL_C_RF_ACC_GYR_15]
+- **model-id (*)** :The model id to be load. Possible values are: [MODEL_PI_RF_ACC_GYR_15, MODEL_M_RF_ACC_GYR_15, MODEL_C_RF_ACC_GYR_15]
 
-- **resource-id (*)** : segment body file dataset in csv format.
+- **resource-id (*)** : The resource file id in csv format.
 
-- **prediction-folder (*)**: the folder where the predictor will create the prediction file.
+- **prediction-folder (*)**: Prediction results folder.
 
-- **prediction-file-format**: string argument used to create the prediction file. By default npz is selected. Possible values are: [npz, csv]
+- **prediction-file-format**: Prediction file format. Default is npz. Possible values: [npz, csv]
 
-- **is-label-text**: boolean argument used to return prediction labels and not numbers by default. By default is False.
+- **is-label-export**: Specify if predictions are export as label format. Default is False.
+
+- **is-database-export**: The prediction result is database saved. Default is False.
 
 - **v**: activate verbose results
 
@@ -60,7 +62,7 @@ $ docker run \
 -v /home/miguel/temp/sample/data/PMP1024_W1_PI_1.csv:/home/miguel/temp/sample/data/PMP1024_W1_PI_1.csv \
 -v /home/miguel/temp/sample/results:/home/miguel/temp/sample/results \
 --entrypoint sh \
-simuruo/wearablepermed-predictor:1.8.0
+simuruo/wearablepermed-predictor:1.10.0
 ```
 
 ## Default Value
@@ -82,13 +84,13 @@ All models offered by predictor are trained with
      Linux/Mac `run_predictor.sh` script:
      ```bash
      # --- CONFIGURATION (Change these) ---
-     PREDICTOR_VERSION="1.8.0"
+     PREDICTOR_VERSION="1.10.0"
      ```
 
      Windows `run_predictor.bat script:
      ```bash
      :: --- SYSTEM CONFIGURATION ---
-     set PREDICTOR_VERSION=1.8.0
+     set PREDICTOR_VERSION=1.10.0
      ```
 3. Rebuild and publish package in Pypi repository (You must have credentials)
 
@@ -101,9 +103,9 @@ All models offered by predictor are trained with
 4. Finally build docker image with the last version selected and publish in `simuruo` Docker Hub account (You must have credentials)
 
      ```bash
-     $ docker build -t wearablepermed-predictor:1.8.0 .
-     $ docker tag wearablepermed-predictor:1.8.0 simuruo/wearablepermed-predictor:1.8.0
-     $ docker push simuruo/wearablepermed-predictor:1.8.0
+     $ docker build -t wearablepermed-predictor:1.10.0 .
+     $ docker tag wearablepermed-predictor:1.10.0 simuruo/wearablepermed-predictor:1.10.0
+     $ docker push simuruo/wearablepermed-predictor:1.10.0
      ```
 
 ## Note

@@ -109,39 +109,49 @@ def parse_args(args):
         metavar="MODEL_KEY",
         required=True,
         dest="model_id",        
-        help=f"The unique ID of the model to load. Options: {available_models}"
+        help=f"The model id to be load. Options: {available_models}"
     )   
     parser.add_argument(
         "-resource-id",
         "--resource-id",
         required=True,
         dest="resource_id",
-        help="resource file [csv]"
+        help="The resource file id in csv format"
     )    
     parser.add_argument(
-        '-is-label-text',
-        '--is-label-text',
+        '-is-label-export',
+        '--is-label-export',
         type=str2bool,
         nargs='?', # Allows the flag to be used without a value
         const=True, # Value used if flag is present but no value given
         default=False,
-        dest="is_label_text",
-        help="Specify if labels are text (True/False). Default is False."
+        dest="is_label_export",
+        help="Specify if predictions are export as label format. Default is False."
     )
     parser.add_argument(
         "-prediction-folder",
         "--prediction-folder",
         required=True,
         dest="prediction_folder",
-        help="Predictions folder results"
+        help="Prediction results folder"
     )        
     parser.add_argument(
         "-prediction-file-format",
         "--prediction-file-format",
         default="npz",
         dest="prediction_file_format",
-        help="prediction file_format"
-    )                 
+        help="Prediction file format. Default is npz. Possible values: [npz, csv]"
+    )
+    parser.add_argument(
+        '-is-database-export',
+        '--is-database-export',
+        type=str2bool,
+        nargs='?', # Allows the flag to be used without a value
+        const=True, # Value used if flag is present but no value given
+        default=False,
+        dest="is_database_export",
+        help="The prediction result is database saved. Default is False."
+    )                     
     parser.add_argument(
         "-v",
         "--verbose",
@@ -149,7 +159,7 @@ def parse_args(args):
         help="set loglevel to INFO",
         action="store_const",
         const=logging.INFO,
-    )   
+    )      
     parser.add_argument(
         "-vv",
         "--very-verbose",
@@ -182,9 +192,9 @@ def load_model(base_path, model_type):
 
         return model
     else:
-        print("Error: Model file not found.")
+        _logger.error(f"Model not found for type {model_type}.")
 
-        return None
+        raise Exception(f"Model not found for type {model_type}.")        
 
 def load_labels(base_path, model_type):
     # 1. Reconstruct the exact same path used in store()
@@ -196,9 +206,9 @@ def load_labels(base_path, model_type):
 
         return label
     else:
-        print("Error: Labels file not found.")
+        _logger.error(f"Labels not found for type {model_type}.")
 
-        return None
+        raise Exception(f"Labels not found for type {model_type}.")
 
 def predict_by_resource(segment_body, resource_id, model_id, predictor_label_encoder):    
     predictions = predict(segment_body, resource_id, model_id, predictor_label_encoder)
@@ -220,44 +230,61 @@ def main(args):
     resource_id = args.resource_id
     prediction_folder = args.prediction_folder    
     prediction_file_format = args.prediction_file_format
-    is_label_text = args.is_label_text
+    is_label_export = args.is_label_export
+    is_database_export = args.is_database_export
 
-    # STEP02: Loading predictor model and labels if exist
-    _logger.info("STEP02: Loading predictor model")
-    predictor_model = load_model(base_path, model_id['path'])
+    try:
+        # STEP02: Loading predictor model and labels if exist
+        _logger.info("STEP02: Loading predictor model")
+        predictor_model = load_model(base_path, model_id['path'])
 
-    predictor_labels = None
-    if is_label_text == True:
-        predictor_labels = load_labels(base_path, model_id['path'])
+        predictor_labels = None
+        if is_label_export == True:
+            predictor_labels = load_labels(base_path, model_id['path'])
 
-    # STEP03: get predictions from resource id
-    _logger.info(f"STEP03: Get predictions from model type {model_id['key']}")
-    predictions = predict_by_resource([model_id['segment_body']], resource_id, predictor_model, predictor_labels)
+        # STEP03: get predictions from resource id
+        _logger.info(f"STEP03: Get predictions from model type {model_id['key']}")
+        
+        predictions = predict_by_resource([model_id['segment_body']], resource_id, predictor_model, predictor_labels)
 
-    print(f"Prediction for a total of: {str(len(predictions))} items")
+        _logger.info(f"Prediction for a total of: {str(len(predictions))} items")
 
-    # STEP04: save resource predictions
-    if prediction_file_format == "npz":
-        result_path = Path(prediction_folder) / "prediction.npz"
+        # STEP04: save resource predictions in host or return the dataframe to be used by job
+        if is_database_export == False:
+            if prediction_file_format == "npz":
+                result_path = Path(prediction_folder) / "prediction.npz"
 
-        np.savez_compressed(
-            result_path, 
-            timestamp=predictions[:,0], 
-            label=predictions[:,1]
-        )
-    else:
-        result_path = Path(prediction_folder) / "prediction.csv"
+                np.savez_compressed(
+                    result_path, 
+                    timestamp=predictions[:,0], 
+                    label=predictions[:,1]
+                )
+            else:
+                result_path = Path(prediction_folder) / "prediction.csv"
 
-        df = pd.DataFrame({
-            'timestamp': predictions[:,0],
-            'label': predictions[:,1]
-        })
+                df = pd.DataFrame({
+                    'timestamp': predictions[:,0],
+                    'label': predictions[:,1]
+                })
 
-        df.to_csv(result_path, index=False)
+                df.to_csv(result_path, index=False)
 
-    print(f"File saved successfully at: {result_path.name}")
+            _logger.info(f"Host saved prediction successfully for model id: {model_id} at: {result_path.name}")
+            _logger.info("Predictor finalized")            
+        else:
+            df = pd.DataFrame({
+                'timestamp': predictions[:,0],
+                'label': predictions[:,1]
+            })
+                    
+            _logger.info(f"Return prediction successfully for model id: {model_id}")
+            _logger.info("Predictor finalized")
 
-    _logger.info("Predictor finalized")
+            return df
+    except Exception as e:
+        _logger.error(f"An error occurred: {e}")
+
+        raise e        
 
 def run():
     """Calls :func:`main` passing the CLI arguments extracted from :obj:`sys.argv`
