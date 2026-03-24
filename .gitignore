@@ -52,8 +52,5 @@ MANIFEST
 .venv*/
 .conda*/
 .python-version
-models
-data
+
 dist
-results
-participants
