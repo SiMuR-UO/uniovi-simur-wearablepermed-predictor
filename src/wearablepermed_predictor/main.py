@@ -110,7 +110,13 @@ def parse_args(args):
         required=True,
         dest="model_id",        
         help=f"The model id to be load. Options: {available_models}"
-    )   
+    )
+    parser.add_argument(
+        '-models-base-path',
+        '--models-base-path',
+        dest="models_base_path",        
+        help=f"The models base path folder."
+    )       
     parser.add_argument(
         "-resource-id",
         "--resource-id",
@@ -224,7 +230,10 @@ def main(args):
     _logger.info("STEP01: Loading arguments")
 
     # get service arguments
-    base_path = Path(__file__).resolve().parent.parent.parent
+    if args.models_base_path is None:
+        models_base_path = Path(__file__).resolve().parent.parent.parent
+    else:
+        models_base_path = args.models_base_path
 
     model_id = args.model_id
     resource_id = args.resource_id
@@ -236,11 +245,11 @@ def main(args):
     try:
         # STEP02: Loading predictor model and labels if exist
         _logger.info("STEP02: Loading predictor model")
-        predictor_model = load_model(base_path, model_id['path'])
+        predictor_model = load_model(models_base_path, model_id['path'])
 
         predictor_labels = None
         if is_label_export == True:
-            predictor_labels = load_labels(base_path, model_id['path'])
+            predictor_labels = load_labels(models_base_path, model_id['path'])
 
         # STEP03: get predictions from resource id
         _logger.info(f"STEP03: Get predictions from model type {model_id['key']}")

@@ -36,7 +36,9 @@ simuruo/wearablepermed-predictor:1.10.0 \
 
 ## Predictor Arguments 
 
-- **model-id (*)** :The model id to be load. Possible values are: [MODEL_PI_RF_ACC_GYR_15, MODEL_M_RF_ACC_GYR_15, MODEL_C_RF_ACC_GYR_15]
+- **models-base-path** :The model base path where models are saved.
+
+- **model-id (*)** :The model id to be load. Possible values are: [MODEL_PI_RF_ACC_GYR_15, MODEL_M_RF_ACC_GYR_15, MODEL_C_RF_ACC_GYR_15, MODEL_PI_RF_ACC_GYR_4, MODEL_M_RF_ACC_GYR_4, MODEL_C_RF_ACC_GYR_4. Example: MODEL_PI_RF_ACC_GYR_15]
 
 - **resource-id (*)** : The resource file id in csv format.
 
@@ -76,7 +78,7 @@ All models offered by predictor are trained with
 1. Set the final version to the precitor python package from file `setup.cfg`
 
      ```bash
-     version = 1.8.0
+     version = 1.11.0
      ```
 
 2. Set the new version in the shell scripts: `run_predictor.sh`, `run_predictor.bat`
@@ -84,13 +86,13 @@ All models offered by predictor are trained with
      Linux/Mac `run_predictor.sh` script:
      ```bash
      # --- CONFIGURATION (Change these) ---
-     PREDICTOR_VERSION="1.10.0"
+     PREDICTOR_VERSION="1.11.0"
      ```
 
      Windows `run_predictor.bat script:
      ```bash
      :: --- SYSTEM CONFIGURATION ---
-     set PREDICTOR_VERSION=1.10.0
+     set PREDICTOR_VERSION=1.11.0
      ```
 3. Rebuild and publish package in Pypi repository (You must have credentials)
 
@@ -103,9 +105,9 @@ All models offered by predictor are trained with
 4. Finally build docker image with the last version selected and publish in `simuruo` Docker Hub account (You must have credentials)
 
      ```bash
-     $ docker build -t wearablepermed-predictor:1.10.0 .
-     $ docker tag wearablepermed-predictor:1.10.0 simuruo/wearablepermed-predictor:1.10.0
-     $ docker push simuruo/wearablepermed-predictor:1.10.0
+     $ docker build -t wearablepermed-predictor:1.11.0 .
+     $ docker tag wearablepermed-predictor:1.11.0 simuruo/wearablepermed-predictor:1.11.0
+     $ docker push simuruo/wearablepermed-predictor:1.11.0
      ```
 
 ## Note
