@@ -38,7 +38,7 @@ Password:
 
 To publish image in `simuruo` docker hub account execute this command:
 ```bash
-$ docker publish simuruo/wearablepermed-predictor:1.16.0
+$ docker push simuruo/wearablepermed-predictor:1.16.0
 ```
 
 ## Execute docker image
