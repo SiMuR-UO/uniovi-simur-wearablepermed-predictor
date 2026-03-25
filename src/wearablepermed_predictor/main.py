@@ -258,11 +258,12 @@ def main(args):
     models_path = Path(models_folder)
     resource_path = Path(resources_folder) / resource_id
 
-    if case_id is not None:
-        case_path_folder = Path(cases_folder) / case_id
-        case_path_folder.mkdir(parents=True, exist_ok=True)
-    else:
-        case_path_folder = Path(cases_folder)
+    if cases_folder is not None:
+        if case_id is not None:
+            case_path_folder = Path(cases_folder) / case_id
+            case_path_folder.mkdir(parents=True, exist_ok=True)
+        else:
+            case_path_folder = Path(cases_folder)
 
     try:
         # STEP02: Loading predictor model and labels if exist
