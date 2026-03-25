@@ -100,13 +100,14 @@ def parse_args(args):
     Returns:
       :obj:`argparse.Namespace`: command line parameters namespace
     """
-    parser = argparse.ArgumentParser(description="Predictor Service")     
+    parser = argparse.ArgumentParser(description="Predictor Service")       
     parser.add_argument(
-        '-models-base-path',
-        '--models-base-path',
-        dest="models_base_path",        
-        help="The models base path folder."
-    )    
+        '--models-folder',
+        '---models-folder',
+        required=True,
+        dest="models_folder",        
+        help=f"The root models folder."
+    )      
     parser.add_argument(
         '-model-id',
         '--model-id',
@@ -116,7 +117,14 @@ def parse_args(args):
         required=True,
         dest="model_id",        
         help=f"The model id to be load. Options: {available_models}"
-    )     
+    )
+    parser.add_argument(
+        '--resources-folder',
+        '---resources-folder',
+        required=True,
+        dest="resources_folder",        
+        help=f"The root resourcers folder."
+    )          
     parser.add_argument(
         "-resource-id",
         "--resource-id",
@@ -125,11 +133,11 @@ def parse_args(args):
         help="The resource file id in csv format"
     )
     parser.add_argument(
-        "-prediction-folder",
-        "--prediction-folder",
+        "-cases-folder",
+        "--cases-folder",
         required=True,
-        dest="prediction_folder",
-        help="Prediction results folder"
+        dest="cases_folder",
+        help="The root cases folder"
     )
     parser.add_argument(
         '-case-id',
@@ -148,11 +156,11 @@ def parse_args(args):
         help="Specify if predictions are export as label format. Default is False."
     )       
     parser.add_argument(
-        "-prediction-file-format",
-        "--prediction-file-format",
+        "-case-file-format",
+        "--case-file-format",
         default="npz",
-        dest="prediction_file_format",
-        help="Prediction file format. Default is npz. Possible values: [npz, csv]"
+        dest="case_file_format",
+        help="Case file format. Default is npz. Possible values: [npz, csv]"
     )
     parser.add_argument(
         '-is-database-export',
@@ -196,7 +204,7 @@ def setup_logging(loglevel):
 
 def load_model(base_path, model_type):
     # 1. Reconstruct the exact same path used in store()
-    model_path = base_path / 'models' / model_type / 'RandomForest.pkl'
+    model_path = base_path / model_type / 'RandomForest.pkl'
     
     # 2. Load the model from the disk
     if os.path.exists(model_path):
@@ -210,7 +218,7 @@ def load_model(base_path, model_type):
 
 def load_labels(base_path, model_type):
     # 1. Reconstruct the exact same path used in store()
-    label_path = base_path / 'models' / model_type / 'label_encoder.pkl'
+    label_path = base_path / model_type / 'label_encoder.pkl'
 
     # 2. Load the model from the disk
     if os.path.exists(label_path):
@@ -236,63 +244,63 @@ def main(args):
     _logger.info("STEP01: Loading arguments")
 
     # get service arguments
-    if args.models_base_path is None:
-        models_base_path = Path(__file__).resolve().parent.parent.parent
-    else:
-        models_base_path = Path(args.models_base_path)
-
-    case_id = args.case_id
+    models_folder = args.models_folder
     model_id = args.model_id
+    resources_folder = args.resources_folder
     resource_id = args.resource_id
-    prediction_folder = args.prediction_folder
-
-    if case_id is not None:
-        prediction_folder = Path(prediction_folder) / case_id
-        prediction_folder.mkdir(parents=True, exist_ok=True)
-    else:
-        prediction_folder = Path(prediction_folder)
-
-    prediction_file_format = args.prediction_file_format
+    cases_folder = args.cases_folder
+    case_id = args.case_id
+    case_file_format = args.case_file_format
     is_label_export = args.is_label_export
     is_database_export = args.is_database_export
+
+    # create path variables from arguments
+    models_path = Path(models_folder)
+    resource_path = Path(resources_folder) / resource_id
+
+    if case_id is not None:
+        case_path_folder = Path(cases_folder) / case_id
+        case_path_folder.mkdir(parents=True, exist_ok=True)
+    else:
+        case_path_folder = Path(cases_folder)
 
     try:
         # STEP02: Loading predictor model and labels if exist
         _logger.info("STEP02: Loading predictor model")
-        predictor_model = load_model(models_base_path, model_id['path'])
+        predictor_model = load_model(models_path, model_id['path'])
 
         predictor_labels = None
         if is_label_export == True:
-            predictor_labels = load_labels(models_base_path, model_id['path'])
+            predictor_labels = load_labels(models_path, model_id['path'])
 
         # STEP03: get predictions from resource id
         _logger.info(f"STEP03: Get predictions from model type {model_id['key']}")
         
-        predictions = predict_by_resource([model_id['segment_body']], resource_id, predictor_model, predictor_labels)
+        predictions = predict_by_resource([model_id['segment_body']], resource_path, predictor_model, predictor_labels)
 
         _logger.info(f"Prediction for a total of: {str(len(predictions))} items")
 
         # STEP04: save resource predictions in host or return the dataframe to be used by job
         if is_database_export == False:
-            if prediction_file_format == "npz":
-                result_path = prediction_folder / "prediction.npz"
+            if case_file_format == "npz":
+                case_file_path = case_path_folder / "prediction.npz"
 
                 np.savez_compressed(
-                    result_path, 
+                    case_file_path, 
                     timestamp=predictions[:,0], 
                     label=predictions[:,1]
                 )
             else:
-                result_path = prediction_folder / "prediction.csv"
+                case_file_path = case_path_folder / "prediction.csv"
 
                 df = pd.DataFrame({
                     'timestamp': predictions[:,0],
                     'label': predictions[:,1]
                 })
 
-                df.to_csv(result_path, index=False)
+                df.to_csv(case_file_path, index=False)
 
-            _logger.info(f"Host saved prediction successfully for model id: {model_id} at: {result_path.name}")
+            _logger.info(f"Host saved prediction successfully for model id: {model_id} at: {case_file_path.name}")
             _logger.info("Predictor finalized")            
         else:
             df = pd.DataFrame({
