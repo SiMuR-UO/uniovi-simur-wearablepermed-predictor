@@ -12,16 +12,36 @@
 
 [![Project generated with PyScaffold](https://img.shields.io/badge/-PyScaffold-005CA0?logo=pyscaffold)](https://pyscaffold.org/)
 
-# uniovi-simur-wearablepermed-predictor
+# Description
 
-> Uniovi Simur WearablePerMed Predictor.
-
-A longer description of your project goes here...
+Uniovi Simur WearablePerMed Predictor.
 
 <!-- pyscaffold-notes -->
-## Excute from docker
-You must to be install docker previos to use this image
+##  Build and publish docker image
+You must install docker previous to use these commands
 
+To build the image execute this command:
+```bash
+$ docker build -t wearablepermed-predictor:1.16.0 .
+```
+
+To tag the image to be published in `simuruo` docker hub account execute this command:
+```bash
+$ docker build tag wearablepermed-predictor:1.16.0 simuruo/wearablepermed-predictor:1.16.0 
+```
+
+Login in `simuruo` docker hub account execute this command:
+```bash
+$ docker login -u simuruo
+Password: 
+```
+
+To publish image in `simuruo` docker hub account execute this command:
+```bash
+$ docker publish simuruo/wearablepermed-predictor:1.16.0
+```
+
+## Execute docker image
 ```bash
 $ docker run \
 --rm \
@@ -39,7 +59,7 @@ simuruo/wearablepermed-predictor:1.16.0 \
 --verbose
 ```
 
-## Predictor Arguments 
+Where these arguments are:
 
 - **models-folder (*)**: The root models folder.
 
@@ -63,7 +83,7 @@ simuruo/wearablepermed-predictor:1.16.0 \
 
 (*) are mandatory arguments
 
-If you want go into the container execute this command.
+If you want login inside the container execute this command.
 
 ```bash
 $ docker run \
