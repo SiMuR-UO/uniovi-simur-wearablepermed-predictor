@@ -100,12 +100,12 @@ def parse_args(args):
     Returns:
       :obj:`argparse.Namespace`: command line parameters namespace
     """
-    parser = argparse.ArgumentParser(description="Predictor Service")
+    parser = argparse.ArgumentParser(description="Predictor Service")     
     parser.add_argument(
         '-models-base-path',
         '--models-base-path',
         dest="models_base_path",        
-        help=f"The models base path folder."
+        help="The models base path folder."
     )    
     parser.add_argument(
         '-model-id',
@@ -123,7 +123,20 @@ def parse_args(args):
         required=True,
         dest="resource_id",
         help="The resource file id in csv format"
-    )    
+    )
+    parser.add_argument(
+        "-prediction-folder",
+        "--prediction-folder",
+        required=True,
+        dest="prediction_folder",
+        help="Prediction results folder"
+    )
+    parser.add_argument(
+        '-case-id',
+        '--case-id',
+        dest="case_id",        
+        help="Case unique name under prediction-folder."
+    )          
     parser.add_argument(
         '-is-label-export',
         '--is-label-export',
@@ -133,14 +146,7 @@ def parse_args(args):
         default=False,
         dest="is_label_export",
         help="Specify if predictions are export as label format. Default is False."
-    )
-    parser.add_argument(
-        "-prediction-folder",
-        "--prediction-folder",
-        required=True,
-        dest="prediction_folder",
-        help="Prediction results folder"
-    )        
+    )       
     parser.add_argument(
         "-prediction-file-format",
         "--prediction-file-format",
@@ -190,7 +196,7 @@ def setup_logging(loglevel):
 
 def load_model(base_path, model_type):
     # 1. Reconstruct the exact same path used in store()
-    model_path = os.path.join(base_path, 'models', model_type, 'RandomForest.pkl')
+    model_path = base_path / 'models' / model_type / 'RandomForest.pkl'
     
     # 2. Load the model from the disk
     if os.path.exists(model_path):
@@ -204,8 +210,8 @@ def load_model(base_path, model_type):
 
 def load_labels(base_path, model_type):
     # 1. Reconstruct the exact same path used in store()
-    label_path = os.path.join(base_path, 'models', model_type, 'label_encoder.pkl')
-    
+    label_path = base_path / 'models' / model_type / 'label_encoder.pkl'
+
     # 2. Load the model from the disk
     if os.path.exists(label_path):
         label = joblib.load(label_path)
@@ -233,11 +239,19 @@ def main(args):
     if args.models_base_path is None:
         models_base_path = Path(__file__).resolve().parent.parent.parent
     else:
-        models_base_path = args.models_base_path
+        models_base_path = Path(args.models_base_path)
 
+    case_id = args.case_id
     model_id = args.model_id
     resource_id = args.resource_id
-    prediction_folder = args.prediction_folder    
+    prediction_folder = args.prediction_folder
+
+    if case_id is not None:
+        prediction_folder = Path(prediction_folder) / case_id
+        prediction_folder.mkdir(parents=True, exist_ok=True)
+    else:
+        prediction_folder = Path(prediction_folder)
+
     prediction_file_format = args.prediction_file_format
     is_label_export = args.is_label_export
     is_database_export = args.is_database_export
@@ -261,7 +275,7 @@ def main(args):
         # STEP04: save resource predictions in host or return the dataframe to be used by job
         if is_database_export == False:
             if prediction_file_format == "npz":
-                result_path = Path(prediction_folder) / "prediction.npz"
+                result_path = prediction_folder / "prediction.npz"
 
                 np.savez_compressed(
                     result_path, 
@@ -269,7 +283,7 @@ def main(args):
                     label=predictions[:,1]
                 )
             else:
-                result_path = Path(prediction_folder) / "prediction.csv"
+                result_path = prediction_folder / "prediction.csv"
 
                 df = pd.DataFrame({
                     'timestamp': predictions[:,0],
