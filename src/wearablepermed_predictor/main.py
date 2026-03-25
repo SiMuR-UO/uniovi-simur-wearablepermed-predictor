@@ -106,7 +106,7 @@ def parse_args(args):
         '---models-folder',
         required=True,
         dest="models_folder",        
-        help=f"The root models folder."
+        help="The root models folder."
     )      
     parser.add_argument(
         '-model-id',
@@ -123,7 +123,7 @@ def parse_args(args):
         '---resources-folder',
         required=True,
         dest="resources_folder",        
-        help=f"The root resourcers folder."
+        help="The root resourcers folder."
     )          
     parser.add_argument(
         "-resource-id",
