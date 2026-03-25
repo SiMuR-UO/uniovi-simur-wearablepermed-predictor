@@ -135,7 +135,6 @@ def parse_args(args):
     parser.add_argument(
         "-cases-folder",
         "--cases-folder",
-        required=True,
         dest="cases_folder",
         help="The root cases folder"
     )
