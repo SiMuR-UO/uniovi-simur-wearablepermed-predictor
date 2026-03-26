@@ -27,4 +27,4 @@ RUN pip install -e .
 ENTRYPOINT ["predictor"]
 
 # Default arguments (can be overridden when running the container)
-CMD ["--segment-body", "Thigh"]
+CMD ["--help"]

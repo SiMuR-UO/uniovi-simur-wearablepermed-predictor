@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # --- CONFIGURATION (Change these) ---
-PREDICTOR_VERSION="1.16.0"
+PREDICTOR_VERSION="1.17.0"
 
 # --- HELP CHECK ---
 if [[ "$1" == "-h" || "$1" == "--help" ]]; then

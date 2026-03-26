@@ -2,7 +2,7 @@
 setlocal
 
 :: --- SYSTEM CONFIGURATION ---
-set PREDICTOR_VERSION=1.16.0
+set PREDICTOR_VERSION=1.17.0
 
 :: --- HELP CHECK ---
 if "%~1"=="-h" goto :show_help

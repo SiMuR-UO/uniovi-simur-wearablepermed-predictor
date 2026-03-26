@@ -22,12 +22,12 @@ You must install docker previous to use these commands
 
 To build the image execute this command:
 ```bash
-$ docker build -t wearablepermed-predictor:1.16.0 .
+$ docker build -t wearablepermed-predictor:1.17.0 .
 ```
 
 To tag the image to be published in `simuruo` docker hub account execute this command:
 ```bash
-$ docker build tag wearablepermed-predictor:1.16.0 simuruo/wearablepermed-predictor:1.16.0 
+$ docker build tag wearablepermed-predictor:1.17.0 simuruo/wearablepermed-predictor:1.17.0 
 ```
 
 Login in `simuruo` docker hub account execute this command:
@@ -38,28 +38,41 @@ Password:
 
 To publish image in `simuruo` docker hub account execute this command:
 ```bash
-$ docker push simuruo/wearablepermed-predictor:1.16.0
+$ docker push simuruo/wearablepermed-predictor:1.17.0
 ```
 
-## Execute docker image
+## Execute from Python package
 ```bash
-$ docker run \
---rm \
--u $(id -u):$(id -g) \
--v /home/miguel/git/uniovi/simur/uniovi-simur-wearablepermed-predictor/models:/home/miguel/git/uniovi/simur/uniovi-simur-wearablepermed-predictor/models \
--v /home/miguel/git/uniovi/simur/uniovi-simur-wearablepermed-predictor/data/input:/home/miguel/git/uniovi/simur/uniovi-simur-wearablepermed-predictor/data/input \
--v /home/miguel/git/uniovi/simur/uniovi-simur-wearablepermed-predictor/data/output:/home/miguel/git/uniovi/simur/uniovi-simur-wearablepermed-predictor/data/output \
-simuruo/wearablepermed-predictor:1.16.0 \
+$ predictor \
 --models-folder /home/miguel/git/uniovi/simur/uniovi-simur-wearablepermed-predictor/models \
 --model-id MODEL_PI_RF_ACC_GYR_4 \
 --resources-folder /home/miguel/git/uniovi/simur/uniovi-simur-wearablepermed-predictor/data/input \
 --resource-id case_PI_BRF_acc_gyr_01/PMP1024_W1_PI_1.csv \
 --cases-folder /home/miguel/git/uniovi/simur/uniovi-simur-wearablepermed-predictor/data/output \
---case-id case_PI_BRF_acc_gyr_4_classes_01
+--case-id case_PI_BRF_acc_gyr_4_classes_01 \
+--case-file-format csv \
 --verbose
 ```
 
-Where these arguments are:
+## Execute from docker image
+```bash
+$ docker run \
+--rm \
+-u $(id -u):$(id -g) \
+-v /home/miguel/git/uniovi/simur/uniovi-simur-wearablepermed-predictor/data/input:/home/miguel/git/uniovi/simur/uniovi-simur-wearablepermed-predictor/data/input \
+-v /home/miguel/git/uniovi/simur/uniovi-simur-wearablepermed-predictor/data/output:/home/miguel/git/uniovi/simur/uniovi-simur-wearablepermed-predictor/data/output \
+simuruo/wearablepermed-predictor:1.17.0 \
+--model-id MODEL_PI_RF_ACC_GYR_4 \
+--resources-folder /home/miguel/git/uniovi/simur/uniovi-simur-wearablepermed-predictor/data/input \
+--resource-id case_PI_BRF_acc_gyr_01/PMP1024_W1_PI_1.csv \
+--cases-folder /home/miguel/git/uniovi/simur/uniovi-simur-wearablepermed-predictor/data/output \
+--case-id case_PI_BRF_acc_gyr_4_classes_01 \
+--verbose
+```
+
+## Predictor arguments
+
+These arguments are used if you select Python Package or Docker containers to execute predictor command:
 
 - **models-folder (*)**: The root models folder.
 
@@ -90,11 +103,10 @@ $ docker run \
 --rm \
 -it \
 -u $(id -u):$(id -g) \
--v /home/miguel/git/uniovi/simur/uniovi-simur-wearablepermed-predictor/models:/home/miguel/git/uniovi/simur/uniovi-simur-wearablepermed-predictor/models \
 -v /home/miguel/git/uniovi/simur/uniovi-simur-wearablepermed-predictor/data/input:/home/miguel/git/uniovi/simur/uniovi-simur-wearablepermed-predictor/data/input \
 -v /home/miguel/git/uniovi/simur/uniovi-simur-wearablepermed-predictor/data/output:/home/miguel/git/uniovi/simur/uniovi-simur-wearablepermed-predictor/data/output \
 --entrypoint sh \
-simuruo/wearablepermed-predictor:1.16.0
+simuruo/wearablepermed-predictor:1.17.0
 ```
 
 ## Default Value
@@ -108,7 +120,7 @@ All models offered by predictor are trained with
 1. Set the final version to the precitor python package from file `setup.cfg`
 
      ```bash
-     version = 1.16.0
+     version = 1.17.0
      ```
 
 2. Set the new version in the shell scripts: `run_predictor.sh`, `run_predictor.bat`
@@ -116,13 +128,13 @@ All models offered by predictor are trained with
      Linux/Mac `run_predictor.sh` script:
      ```bash
      # --- CONFIGURATION (Change these) ---
-     PREDICTOR_VERSION="1.16.0"
+     PREDICTOR_VERSION="1.17.0"
      ```
 
      Windows `run_predictor.bat script:
      ```bash
      :: --- SYSTEM CONFIGURATION ---
-     set PREDICTOR_VERSION=1.16.0
+     set PREDICTOR_VERSION=1.17.0
      ```
 3. Rebuild and publish package in Pypi repository (You must have credentials)
 
@@ -135,9 +147,9 @@ All models offered by predictor are trained with
 4. Finally build docker image with the last version selected and publish in `simuruo` Docker Hub account (You must have credentials)
 
      ```bash
-     $ docker build -t wearablepermed-predictor:1.16.0 .
-     $ docker tag wearablepermed-predictor:1.16.0 simuruo/wearablepermed-predictor:1.16.0
-     $ docker push simuruo/wearablepermed-predictor:1.16.0
+     $ docker build -t wearablepermed-predictor:1.17.0 .
+     $ docker tag wearablepermed-predictor:1.17.0 simuruo/wearablepermed-predictor:1.17.0
+     $ docker push simuruo/wearablepermed-predictor:1.17.0
      ```
 
 ## Note

@@ -104,7 +104,6 @@ def parse_args(args):
     parser.add_argument(
         '--models-folder',
         '---models-folder',
-        required=True,
         dest="models_folder",        
         help="The root models folder."
     )      
@@ -253,7 +252,12 @@ def main(args):
     is_database_export = args.is_database_export
 
     # create path variables from arguments
-    models_path = Path(models_folder)
+    if models_folder is not None:
+        models_path = Path(models_folder)                                      # configured by user to be used by for python package     
+    else:        
+        models_path = Path(__file__).resolve().parent.parent.parent / 'models' # configured by default to be used by docker containers
+
+    #models_path = Path(models_folder)
     resource_path = Path(resources_folder) / resource_id
 
     if cases_folder is not None:
