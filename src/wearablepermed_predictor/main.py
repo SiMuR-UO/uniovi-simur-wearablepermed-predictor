@@ -113,7 +113,6 @@ def parse_args(args):
         '--model-id',
         type=model_object_type,
         choices=list(MODEL_LOOKUP.values()), # We pass objects, but argparse uses their str() for help
-        metavar="MODEL_KEY",
         required=True,
         dest="model_id",        
         help=f"The model id to be load. Options: {available_models}"

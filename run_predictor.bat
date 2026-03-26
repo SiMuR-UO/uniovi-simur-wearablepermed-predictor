@@ -2,7 +2,7 @@
 setlocal
 
 :: --- SYSTEM CONFIGURATION ---
-set PREDICTOR_VERSION=1.8.0
+set PREDICTOR_VERSION=1.16.0
 
 :: --- HELP CHECK ---
 if "%~1"=="-h" goto :show_help
@@ -15,20 +15,24 @@ pause
 exit /b 0
 
 :validate
-:: Check for 3 mandatory arguments
-if "%~3"=="" (
+:: Check for 5 mandatory arguments
+if "%~5"=="" (
     echo ❌ Error: Missing mandatory arguments.
-    echo Usage: run_predictor.bat [MODEL_ID] [RESOURCE_ID] [PRED_FOLDER]
+    echo Usage: run_predictor.bat [MODELS_FOLDER] [MODEL_ID] [RESOURCES_FOLDER] [RESOURCE_ID] [CASES_FOLDER] [OPTIONAL_ARGUMENTS]
     pause
     exit /b 1
 )
 
 :: Assign Mandatory
-set MODEL_ID=%1
-set RESOURCE_ID=%2
-set PRED_FOLDER=%3
+set MODELS_FOLDER=%1
+set MODEL_ID=%2
+set RESOURCES_FOLDER=%3
+set RESOURCE_ID=%4
+set CASES_FOLDER=%5
 
 :: Shift the internal pointer to capture remaining arguments
+shift
+shift
 shift
 shift
 shift
@@ -38,7 +42,7 @@ shift
 set t=%time: =0%
 set TIMESTAMP=%date:~10,4%%date:~4,2%%date:~7,2%_%t:~0,2%%t:~3,2%%t:~6,2%
 set UNIQUE_ID=%RANDOM%
-set CONTAINER_NAME=%M_MODEL_ID%_%TIMESTAMP%_%UNIQUE_ID%
+set CONTAINER_NAME=%MODEL_ID%_%TIMESTAMP%_%UNIQUE_ID%
 
 :: %1 now starts from the 4th argument provided by the user
 echo 🚀 Initializing Docker Predictor...
@@ -46,12 +50,15 @@ echo 🚀 Initializing Docker Predictor...
 docker run --rm ^
   --name "%CONTAINER_NAME%" ^
   -u $(id -u):$(id -g) ^
-  -v "$RESOURCE_ID":"$RESOURCE_ID" ^
-  -v "$PRED_FOLDER":"$PRED_FOLDER" ^
+  -v "$MODELS_FOLDER":"$MODELS_FOLDER" ^
+  -v "$RESOURCES_FOLDER":"$RESOURCES_FOLDER" ^
+  -v "$CASES_FOLDER":"$CASES_FOLDER" ^
   wearablepermed-predictor:%PREDICTOR_VERSION% ^
+  --models-folder %MODELS_FOLDER% ^
   --model-id %MODEL_ID% ^
+  --resources-folder %RESOURCES_FOLDER% ^
   --resource-id %RESOURCE_ID% ^
-  --prediction-folder %PRED_FOLDER% ^
+  --cases-folder %CASES_FOLDER% ^
   %1 %2 %3 %4 %5
 
 pause
