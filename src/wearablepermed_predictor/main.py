@@ -209,9 +209,9 @@ def load_model(base_path, model_type):
 
         return model
     else:
-        _logger.error(f"Model not found for type {model_type}.")
+        _logger.error(f"Model not found for type {model_path}.")
 
-        raise Exception(f"Model not found for type {model_type}.")        
+        raise Exception(f"Model not found for type {model_path}.")        
 
 def load_labels(base_path, model_type):
     # 1. Reconstruct the exact same path used in store()
@@ -223,9 +223,9 @@ def load_labels(base_path, model_type):
 
         return label
     else:
-        _logger.error(f"Labels not found for type {model_type}.")
+        _logger.error(f"Labels not found for type {label_path}.")
 
-        raise Exception(f"Labels not found for type {model_type}.")
+        raise Exception(f"Labels not found for type {label_path}.")
 
 def predict_by_resource(segment_body, resource_id, model_id, predictor_label_encoder):    
     predictions = predict(segment_body, resource_id, model_id, predictor_label_encoder)
@@ -257,7 +257,6 @@ def main(args):
     else:        
         models_path = Path(__file__).resolve().parent.parent.parent / 'models' # configured by default to be used by docker containers
 
-    #models_path = Path(models_folder)
     resource_path = Path(resources_folder) / resource_id
 
     if cases_folder is not None:
