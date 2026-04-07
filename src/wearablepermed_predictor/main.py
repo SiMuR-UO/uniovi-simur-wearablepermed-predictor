@@ -56,13 +56,13 @@ MODELS_CONFIG = [
     {
         'key': 'MODEL_C_RF_ACC_GYR_4',
         'path': 'case_C_BRF_acc_gyr_4_classes',
-        'segment_body': 'hip',
+        'segment_body': 'Hip',
         'help': 'Individual RandomForest Model for hip with accelerometer, gyroscope and 4 classes'
     },    
     {
         'key': 'MODEL_C_RF_ACC_GYR_15',
         'path': 'case_C_BRF_acc_gyr_15_classes',
-        'segment_body': 'hip',
+        'segment_body': 'Hip',
         'help': 'Individual RandomForest Model for hip with accelerometer, gyroscope and 15 classes'
     },       
 ]
