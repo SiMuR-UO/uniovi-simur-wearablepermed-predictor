@@ -1,3 +1,4 @@
+from enum import Enum
 import os
 import sys
 import argparse
@@ -6,6 +7,7 @@ import joblib
 import numpy as np
 import pandas as pd
 from pathlib import Path
+from huggingface_hub import HfApi
 
 from wearablepermed_predictor.core import predict
 
@@ -15,70 +17,24 @@ __license__ = "MIT"
 
 _logger = logging.getLogger(__name__)
 
-class ValidateSegments(argparse.Action):
-    def __call__(self, parser, namespace, values, option_string=None):
-        # 1. Check for duplicates
-        if len(values) != len(set(values)):
-            raise argparse.ArgumentError(self, f"Duplicate values found in {values}")
-        
-        # 2. Check maximum length
-        if len(values) > 3:
-            raise argparse.ArgumentError(self, f"Too many segments. Max is 3, you provided {len(values)}")
-        
-        setattr(namespace, self.dest, values)
+class ML_Model(Enum):
+    esann = 'ESANN'
+    capture24 = 'CAPTURE24'
+    randomforest = 'Random Forest'
+    xgboost = 'XGBoost'
 
-# Your Collection of Objects (Source of Truth)
-MODELS_CONFIG = [
-    {
-        'key': 'MODEL_PI_RF_ACC_GYR_4',
-        'path': 'case_PI_BRF_acc_gyr_4_classes',
-        'segment_body': 'Thigh',
-        'help': 'Individual RandomForest Model for thigh with accelerometer, gyroscope and 4 classes'
-    },    
-    {
-        'key': 'MODEL_PI_RF_ACC_GYR_15',
-        'path': 'case_PI_BRF_acc_gyr_15_classes',
-        'segment_body': 'Thigh',
-        'help': 'Individual RandomForest Model for thigh with accelerometer, gyroscope and 15 classes'
-    },
-    {
-        'key': 'MODEL_M_RF_ACC_GYR_4',
-        'path': 'case_M_BRF_acc_gyr_4_classes',
-        'segment_body': 'Wrist',
-        'help': 'Individual RandomForest Model for wrist with accelerometer, gyroscope and 4 classes'
-    },    
-    {
-        'key': 'MODEL_M_RF_ACC_GYR_15',
-        'path': 'case_M_BRF_acc_gyr_15_classes',
-        'segment_body': 'Wrist',
-        'help': 'Individual RandomForest Model for wrist with accelerometer, gyroscope and 15 classes'
-    },
-    {
-        'key': 'MODEL_C_RF_ACC_GYR_4',
-        'path': 'case_C_BRF_acc_gyr_4_classes',
-        'segment_body': 'Hip',
-        'help': 'Individual RandomForest Model for hip with accelerometer, gyroscope and 4 classes'
-    },    
-    {
-        'key': 'MODEL_C_RF_ACC_GYR_15',
-        'path': 'case_C_BRF_acc_gyr_15_classes',
-        'segment_body': 'Hip',
-        'help': 'Individual RandomForest Model for hip with accelerometer, gyroscope and 15 classes'
-    },       
-]
+class Channel(Enum):
+    accelerometer = 'Accelerometer'
+    accelerometer_gyroscope = 'Accelerometer,Gyroscope'
 
-# Helper to get keys for argparse choices
-MODEL_LOOKUP = {m['key']: m for m in MODELS_CONFIG}
+class Segment_Body(Enum):
+    thigh = 'Thigh'
+    wrist = 'Wrist'
+    hip = 'Hip'
 
-available_models = ", ".join(MODEL_LOOKUP.keys())
-
-def model_object_type(selection):
-    """Custom type function for argparse to return the full object"""
-    if selection in MODEL_LOOKUP:
-        return MODEL_LOOKUP[selection]
-
-    # This part handles the error message if the user types something wrong
-    raise argparse.ArgumentTypeError(f"Invalid model key: '{selection}'. Choose from {list(MODEL_LOOKUP.keys())}")
+class Class_Type(Enum):
+    classes_4 = '4 Classes'
+    classes_15 = '15 Classes'
 
 def str2bool(v):
     if isinstance(v, bool):
@@ -102,23 +58,65 @@ def parse_args(args):
     """
     parser = argparse.ArgumentParser(description="Predictor Service")       
     parser.add_argument(
-        '--models-folder',
-        '---models-folder',
-        dest="models_folder",        
-        help="The root models folder."
-    )      
-    parser.add_argument(
-        '-model-id',
-        '--model-id',
-        type=model_object_type,
-        choices=list(MODEL_LOOKUP.values()), # We pass objects, but argparse uses their str() for help
-        required=True,
-        dest="model_id",        
-        help=f"The model id to be load. Options: {available_models}"
+        '-organization-id',
+        '--organization-id',
+        default="simuruo",
+        dest="organization_id",        
+        help="The organization Id."
     )
     parser.add_argument(
+        '-model-file',
+        '--model-file',
+        dest="model_file",        
+        help="The custom model file."
+    )
+    parser.add_argument(
+        '-label-file',
+        '--label-file',
+        dest="label_file",        
+        help="The custom label file."
+    )         
+    parser.add_argument(
+        '-model-type',
+        '--model-type',
+        required=True,
+        dest="model_type",    
+        choices=[m.name for m in ML_Model],        
+        help=f"The Model Type. Choose from: {', '.join([m.name for m in ML_Model])}"        
+    )
+    parser.add_argument(
+        '-sensor-channel',
+        '--sensor-channel',
+        required=True,
+        dest="sensor_channel",    
+        choices=[m.name for m in Channel],        
+        help=f"The Sensor Channels. Choose from: {', '.join([m.name for m in Channel])}"        
+    )
+    parser.add_argument(
+        '-segment-body',
+        '--segment-body',
+        required=True,
+        dest="segment_body",    
+        choices=[m.name for m in Segment_Body],        
+        help=f"The Segment Body. Choose from: {', '.join([m.name for m in Segment_Body])}"        
+    )
+    parser.add_argument(
+        '-class-type',
+        '--class-type',
+        required=True,
+        dest="class_type",    
+        choices=[m.name for m in Class_Type],        
+        help=f"The Class Type. Choose from: {', '.join([m.name for m in Class_Type])}"        
+    )                    
+    parser.add_argument(
+        '-models-folder',
+        '--models-folder',
+        dest="models_folder",        
+        help="The root models folder."
+    )
+    parser.add_argument(
+        '-resources-folder',
         '--resources-folder',
-        '---resources-folder',
         required=True,
         dest="resources_folder",        
         help="The root resourcers folder."
@@ -129,7 +127,7 @@ def parse_args(args):
         required=True,
         dest="resource_id",
         help="The resource file id in csv format"
-    )
+    )  
     parser.add_argument(
         "-cases-folder",
         "--cases-folder",
@@ -199,36 +197,49 @@ def setup_logging(loglevel):
         level=loglevel, stream=sys.stdout, format=logformat, datefmt="%Y-%m-%d %H:%M:%S"
     )
 
-def load_model(base_path, model_type):
-    # 1. Reconstruct the exact same path used in store()
-    model_path = base_path / model_type / 'RandomForest.pkl'
-    
-    # 2. Load the model from the disk
-    if os.path.exists(model_path):
-        model = joblib.load(model_path)
+def set_model_id(model_type, sensor_channel, segment_body, class_type):
+    # Model id policy name
+    return model_type + "_" + sensor_channel + "_" + segment_body + "_" + class_type
+
+def get_hf_model_id(author, model_type, sensor_channel, segment_body, class_type):
+    api = HfApi()
+
+    # construct the filter for Hugging Face
+    filter = model_type + "," + sensor_channel + "," + segment_body + "," + class_type
+
+    models = list(api.list_models(author=author, filter=filter))
+
+    for model in models:
+        model_id = model.id  # e.g. "simuruo/some-model-name"
+        break
+
+    return model_id
+
+def load_model(model_file):
+    if os.path.exists(model_file):
+        model = joblib.load(model_file)
 
         return model
     else:
-        _logger.error(f"Model not found for type {model_path}.")
+        _logger.error(f"Model not found for type {model_file}.")
 
-        raise Exception(f"Model not found for type {model_path}.")        
+        raise Exception(f"Model not found for type {model_file}.")        
 
-def load_labels(base_path, model_type):
-    # 1. Reconstruct the exact same path used in store()
-    label_path = base_path / model_type / 'label_encoder.pkl'
-
-    # 2. Load the model from the disk
-    if os.path.exists(label_path):
-        label = joblib.load(label_path)
+def load_labels(label_file):
+    if os.path.exists(label_file):
+        label = joblib.load(label_file)
 
         return label
     else:
-        _logger.error(f"Labels not found for type {label_path}.")
+        _logger.error(f"Labels not found for type {label_file}.")
 
-        raise Exception(f"Labels not found for type {label_path}.")
+        raise Exception(f"Labels not found for type {label_file}.")
 
-def predict_by_resource(segment_body, resource_id, model_id, predictor_label_encoder):    
-    predictions = predict(segment_body, resource_id, model_id, predictor_label_encoder)
+def predict_by_resource(segment_body, resource_id, model_id, predictor_label_encoder): 
+    # the utils package use capitalize segment bodies
+    segment_body_capitalized = [s.capitalize() for s in segment_body]
+
+    predictions = predict(segment_body_capitalized, resource_id, model_id, predictor_label_encoder)
 
     return predictions
 
@@ -237,25 +248,51 @@ def main(args):
     args = parse_args(args)
     setup_logging(args.loglevel)
     
-    # STEP01: get predictions from resource id
-    _logger.info("STEP01: Loading arguments")
-
     # get service arguments
+    # model arguments
+    organization_id = args.organization_id
     models_folder = args.models_folder
-    model_id = args.model_id
+    model_type = args.model_type
+    sensor_channel = args.sensor_channel
+    segment_body = args.segment_body
+    class_type = args.class_type    
+    model_id = set_model_id(model_type, sensor_channel, segment_body, class_type)
+
+    # resource arguments
     resources_folder = args.resources_folder
     resource_id = args.resource_id
+
+    # case result arguments
     cases_folder = args.cases_folder
     case_id = args.case_id
-    case_file_format = args.case_file_format
+    case_file_format = args.case_file_format    
     is_label_export = args.is_label_export
     is_database_export = args.is_database_export
 
-    # create path variables from arguments
-    if models_folder is not None:
-        models_path = Path(models_folder)                                      # configured by user to be used by for python package     
-    else:        
-        models_path = Path(__file__).resolve().parent.parent.parent / 'models' # configured by default to be used by docker containers
+    # STEP01: get resources from arguments
+    _logger.info("STEP01: Loading resource arguments")
+
+    # get model from Huggin Face or from local configuration
+    if model_type is not None:
+        # create folder is not exist and get fix model id from huggingface
+        models_folder = Path(__file__).resolve().parent.parent.parent / 'models' / model_id
+        models_folder.mkdir(parents=True, exist_ok=True)
+        model_file = models_folder / 'RandomForest_1.pkl'
+        label_file = models_folder / 'label_encoder.pkl'
+        model_id = get_hf_model_id(organization_id, model_type, sensor_channel, segment_body, class_type)
+
+        if model_id is None:
+            raise Exception("Model Id not exist for this arguments")
+        
+        # download model id from hf
+        HfApi().snapshot_download(
+            repo_id=model_id,
+            repo_type="model",
+            local_dir=str(models_folder))
+    else:
+        # define custom model id locally
+        model_file = Path(model_file)
+        label_file = Path(label_file)
 
     resource_path = Path(resources_folder) / resource_id
 
@@ -269,16 +306,16 @@ def main(args):
     try:
         # STEP02: Loading predictor model and labels if exist
         _logger.info("STEP02: Loading predictor model")
-        predictor_model = load_model(models_path, model_id['path'])
+        predictor_model = load_model(model_file)
 
         predictor_labels = None
         if is_label_export == True:
-            predictor_labels = load_labels(models_path, model_id['path'])
+            predictor_labels = load_labels(label_file)
 
         # STEP03: get predictions from resource id
-        _logger.info(f"STEP03: Get predictions from model type {model_id['key']}")
+        _logger.info(f"STEP03: Get predictions from model type {model_id}")
         
-        predictions = predict_by_resource([model_id['segment_body']], resource_path, predictor_model, predictor_labels)
+        predictions = predict_by_resource([segment_body], resource_path, predictor_model, predictor_labels)
 
         _logger.info(f"Prediction for a total of: {str(len(predictions))} items")
 
