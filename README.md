@@ -46,15 +46,15 @@ If you want use our models published in Huggin Face you must execute a command l
 
 ```bash
 $ predictor \
---model-type randomforest,
---sensor-channel accelerometer_gyroscope,
---segment-body wrist,
---class-type classes_4
---resources-folder /home/miguel/temp/models/wearablepermed_models/input,
---resource-id PMP1024_W1_M.csv,
---cases-folder /home/miguel/temp/models/wearablepermed_models/results,
---case-id case_M_BRF_acc_gyr_4_classes,
---case-file-format csv,
+--model-type randomforest \
+--sensor-channel accelerometer_gyroscope \
+--segment-body wrist \
+--class-type classes_4 \
+--resources-folder /home/miguel/temp/models/wearablepermed_models/input \
+--resource-id PMP1024_W1_M.csv \
+--cases-folder /home/miguel/temp/models/wearablepermed_models/results \
+--case-id case_M_BRF_acc_gyr_4_classes \
+--case-file-format csv \
 --verbose
 ```
 
