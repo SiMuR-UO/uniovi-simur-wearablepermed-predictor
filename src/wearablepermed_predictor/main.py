@@ -274,6 +274,10 @@ def main(args):
 
     # get model from Huggin Face or from local configuration
     if model_type is not None:
+        # only Random Forest is just implemented
+        if model_type is not "randomforest":
+            raise Exception("Only Ranbdom Forest is implemented")            
+
         # create folder is not exist and get fix model id from huggingface
         models_folder = Path(__file__).resolve().parent.parent.parent / 'models' / model_id
         models_folder.mkdir(parents=True, exist_ok=True)
