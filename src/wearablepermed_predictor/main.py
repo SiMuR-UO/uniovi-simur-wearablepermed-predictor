@@ -4,37 +4,20 @@ import sys
 import argparse
 import logging
 import joblib
+from tensorflow import keras
 import numpy as np
 import pandas as pd
 from pathlib import Path
 from huggingface_hub import HfApi
 
-from wearablepermed_predictor.core import predict
+from wearablepermed_predictor.core.enum import ML_Model, Channel, Segment_Body, Class_Type
+from wearablepermed_predictor.core import predictor_characteristics, predictor_convolutional
 
 __author__ = "Miguel Angel Salinas Gancedo<uo34525@uniovi.es>, Antonio Miguel López Rodriguez<amlopez@uniovi.es>"
 __copyright__ = "Uniovi"
 __license__ = "MIT"
 
 _logger = logging.getLogger(__name__)
-
-class ML_Model(Enum):
-    esann = 'ESANN'
-    capture24 = 'CAPTURE24'
-    randomforest = 'Random Forest'
-    xgboost = 'XGBoost'
-
-class Channel(Enum):
-    accelerometer = 'Accelerometer'
-    accelerometer_gyroscope = 'Accelerometer,Gyroscope'
-
-class Segment_Body(Enum):
-    thigh = 'Thigh'
-    wrist = 'Wrist'
-    hip = 'Hip'
-
-class Class_Type(Enum):
-    classes_4 = '4 Classes'
-    classes_15 = '15 Classes'
 
 def str2bool(v):
     if isinstance(v, bool):
@@ -79,6 +62,7 @@ def parse_args(args):
     parser.add_argument(
         '-model-type',
         '--model-type',
+        required=True,
         dest="model_type",    
         choices=[m.name for m in ML_Model],        
         help=f"The Model Type. Choose from: {', '.join([m.name for m in ML_Model])}"        
@@ -206,15 +190,21 @@ def get_hf_model_id(author, model_type, sensor_channel, segment_body, class_type
 
     models = list(api.list_models(author=author, filter=filter))
 
+    if len(models) == 0:
+        raise Exception("Any model exist for these arguments")
+
     for model in models:
         model_id = model.id  # e.g. "simuruo/some-model-name"
         break
 
     return model_id
 
-def load_model(model_file):
+def load_model(model_type, model_file):
     if os.path.exists(model_file):
-        model = joblib.load(model_file)
+        if (ML_Model.randomforest.name == model_type or ML_Model.xgboost.name == model_type):
+            model = joblib.load(model_file)
+        else:
+            model = keras.models.load_model(model_file)
 
         return model
     else:
@@ -232,11 +222,14 @@ def load_labels(label_file):
 
         raise Exception(f"Labels not found for type {label_file}.")
 
-def predict_by_resource(segment_body, resource_id, model_id, predictor_label_encoder): 
+def predict_by_resource(segment_body, resource_id, model_type, model_id, predictor_label_encoder): 
     # the utils package use capitalize segment bodies
     segment_body_capitalized = [s.capitalize() for s in segment_body]
 
-    predictions = predict(segment_body_capitalized, resource_id, model_id, predictor_label_encoder)
+    if (ML_Model.randomforest.name == model_type or ML_Model.xgboost.name == model_type):
+        predictions = predictor_characteristics.predict(segment_body_capitalized, resource_id, model_type, model_id, predictor_label_encoder)
+    else:
+        predictions = predictor_convolutional.predict(segment_body_capitalized, resource_id, model_id, predictor_label_encoder)
 
     return predictions
 
@@ -272,16 +265,27 @@ def main(args):
     # get model from Huggin Face or from local configuration
     if model_type is not None:
         # only Random Forest is just implemented
-        if model_type != "randomforest":
-            raise Exception("Only Ranbdom Forest is implemented")            
+        #if model_type != "randomforest":
+        #    raise Exception("Only Ranbdom Forest is implemented")            
 
         # create folder is not exist and get fix model id from huggingface
         models_folder = Path(__file__).resolve().parent.parent.parent / 'models' / model_id
         models_folder.mkdir(parents=True, exist_ok=True)
         _logger.info(f"Creating models folder in: {str(models_folder)}")
 
-        model_file = models_folder / 'RandomForest_1.pkl'
-        label_file = models_folder / 'label_encoder.pkl'
+        if ML_Model.randomforest.name == model_type:
+            model_file = models_folder / 'RandomForest_1.pkl'
+            label_file = models_folder / 'label_encoder.pkl'
+        elif ML_Model.xgboost.name == model_type:            
+            model_file = models_folder / 'XGBoost.pkl'
+            label_file = models_folder / 'label_encoder.pkl'
+        elif ML_Model.capture24.name == model_type:            
+            model_file = models_folder / 'CAPTURE24.h5'
+            label_file = models_folder / 'label_encoder.pkl'
+        else:            
+            model_file = models_folder / 'ESANN.h5'
+            label_file = models_folder / 'label_encoder.pkl'
+
         model_id = get_hf_model_id(organization_id, model_type, sensor_channel, segment_body, class_type)
 
         if model_id is None:
@@ -309,16 +313,16 @@ def main(args):
     try:
         # STEP02: Loading predictor model and labels if exist
         _logger.info("STEP02: Loading predictor model")
-        predictor_model = load_model(model_file)
+        model_predictor = load_model(model_type, model_file)
 
-        predictor_labels = None
+        model_labels = None
         if is_label_export == True:
-            predictor_labels = load_labels(label_file)
+            model_labels = load_labels(label_file)
 
         # STEP03: get predictions from resource id
         _logger.info(f"STEP03: Get predictions from model type {model_id}")
         
-        predictions = predict_by_resource([segment_body], resource_path, predictor_model, predictor_labels)
+        predictions = predict_by_resource([segment_body], resource_path, model_type, model_predictor, model_labels)
 
         _logger.info(f"Prediction for a total of: {str(len(predictions))} items")
 

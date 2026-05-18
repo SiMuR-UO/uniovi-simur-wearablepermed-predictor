@@ -25,12 +25,12 @@ def predict(segment_body, resource_id_file, model_id, predictor_label_encoder=No
 
         _logger.info(f"Resource id {resource_id_file} windowed")
         
-        # 4 calculate predictions. We can obtain the number or labels and get with the first timestamp for each window
-        predictions = model_id.predict(windowed_data).astype(int)
+        # 3 calculate predictions. We can obtain the number or labels and get with the first timestamp for each window
+        predictions = model_id.predict(windowed_data)
 
         _logger.info(f"Resource id {resource_id_file} predicted")
 
-        # 5 expand classification to cover all values followinf the pattern: "Winner Takes All"
+        # 4 expand classification to cover all values followinf the pattern: "Winner Takes All"
         # Create an empty array for the full results
         total_samples = activity_data.shape[0]
         step = int(WINDOW_SIZE * WINDOW_OVERLAPPING)
@@ -50,12 +50,12 @@ def predict(segment_body, resource_id_file, model_id, predictor_label_encoder=No
             if start >= total_samples:
                 break                
 
-            full_predictions[start:end] = prediction
+            full_predictions[start:end] = np.argmax(prediction)
 
         # the last items not expandes set the last prediction for each ones
-        full_predictions[full_predictions == -1] = predictions[-1]
+        full_predictions[full_predictions == -1] = np.argmax(predictions[-1])
 
-        # 6 substitute the numeric label values for strings if you pass this relation
+        # 5 substitute the numeric label values for strings if you pass this relation
         if predictor_label_encoder is not None:
             full_predictions = predictor_label_encoder.inverse_transform(full_predictions)
 

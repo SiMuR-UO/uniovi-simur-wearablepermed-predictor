@@ -1,6 +1,8 @@
 import logging
 import numpy as np
+import xgboost as xgb
 
+from wearablepermed_predictor.core.enum import ML_Model, Channel, Segment_Body, Class_Type
 from wearablepermed_utils.core import load_WPM_data, apply_windowing_WPM_segmented_data_predictor, extract_features
 
 _logger = logging.getLogger(__name__)
@@ -8,7 +10,7 @@ _logger = logging.getLogger(__name__)
 WINDOW_SIZE = 250
 WINDOW_OVERLAPPING = 0.5
 
-def predict(segment_body, resource_id_file, model_id, predictor_label_encoder=None):
+def predict(segment_body, resource_id_file, model_type, model_id, predictor_label_encoder=None):
     try:
         # 1 Load IMU data based on the segment (csv files)
         data_imu = load_WPM_data(resource_id_file, segment_body[0])
@@ -30,7 +32,11 @@ def predict(segment_body, resource_id_file, model_id, predictor_label_encoder=No
         _logger.info(f"Shape extract features: {extract_features_data.shape}.")
         
         # 4 calculate predictions. We can obtain the number or labels and get with the first timestamp for each window
-        predictions = model_id.predict(extract_features_data).astype(int)
+        if ML_Model.xgboost.name == model_type:            
+            extract_features_data_dmatrix = xgb.DMatrix(extract_features_data)
+            predictions = model_id.predict(extract_features_data_dmatrix)
+        else:
+            predictions = model_id.predict(extract_features_data).astype(int) #TODO [Check astype to remove]
 
         _logger.info(f"Resource id {resource_id_file} predicted")
 
@@ -54,10 +60,10 @@ def predict(segment_body, resource_id_file, model_id, predictor_label_encoder=No
             if start >= total_samples:
                 break                
 
-            full_predictions[start:end] = prediction
+            full_predictions[start:end] = np.argmax(prediction)
 
         # the last items not expandes set the last prediction for each ones
-        full_predictions[full_predictions == -1] = predictions[-1]
+        full_predictions[full_predictions == -1] = np.argmax(predictions[-1])
 
         # 6 substitute the numeric label values for strings if you pass this relation
         if predictor_label_encoder is not None:
