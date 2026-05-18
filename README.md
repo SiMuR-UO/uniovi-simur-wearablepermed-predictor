@@ -42,17 +42,36 @@ $ docker push simuruo/wearablepermed-predictor:1.18.0
 ```
 
 ## Execute from Python package
+If you want use our models published in Huggin Face you must execute a command like this:
+
 ```bash
 $ predictor \
---models-folder /home/miguel/git/uniovi/simur/uniovi-simur-wearablepermed-predictor/models \
---model-id MODEL_PI_RF_ACC_GYR_4 \
---resources-folder /home/miguel/git/uniovi/simur/uniovi-simur-wearablepermed-predictor/data/input \
---resource-id case_PI_BRF_acc_gyr_01/PMP1024_W1_PI_1.csv \
---cases-folder /home/miguel/git/uniovi/simur/uniovi-simur-wearablepermed-predictor/data/output \
---case-id case_PI_BRF_acc_gyr_4_classes_01 \
---case-file-format csv \
+--model-type randomforest,
+--sensor-channel accelerometer_gyroscope,
+--segment-body wrist,
+--class-type classes_4
+--resources-folder /home/miguel/temp/models/wearablepermed_models/input,
+--resource-id PMP1024_W1_M.csv,
+--cases-folder /home/miguel/temp/models/wearablepermed_models/results,
+--case-id case_M_BRF_acc_gyr_4_classes,
+--case-file-format csv,
 --verbose
 ```
+
+If you want to use your custom models must execute a command like this:
+```bash
+$ predictor \
+--model_file /home/miguel/git/uniovi/simur/uniovi-simur-wearablepermed-predictor/models/RandomForest.pkl,
+--label_file /home/miguel/git/uniovi/simur/uniovi-simur-wearablepermed-predictor/models/label_encoder.pkl,
+--resources-folder /home/miguel/temp/models/wearablepermed_models/input,
+--resource-id PMP1024_W1_M.csv,
+--cases-folder /home/miguel/temp/models/wearablepermed_models/results,
+--case-id case_M_BRF_acc_gyr_4_classes,
+--case-file-format csv,
+--verbose
+```
+
+**Actually only Ranfom Forest is implemented in predictor**
 
 ## Execute from docker image
 ```bash
@@ -62,7 +81,10 @@ $ docker run \
 -v /home/miguel/git/uniovi/simur/uniovi-simur-wearablepermed-predictor/data/input:/home/miguel/git/uniovi/simur/uniovi-simur-wearablepermed-predictor/data/input \
 -v /home/miguel/git/uniovi/simur/uniovi-simur-wearablepermed-predictor/data/output:/home/miguel/git/uniovi/simur/uniovi-simur-wearablepermed-predictor/data/output \
 simuruo/wearablepermed-predictor:1.18.0 \
---model-id MODEL_PI_RF_ACC_GYR_4 \
+--model-type randomforest \
+--sensor-channel accelerometer_gyroscope \
+--segment-body wrist \
+--class-type classes_4 \
 --resources-folder /home/miguel/git/uniovi/simur/uniovi-simur-wearablepermed-predictor/data/input \
 --resource-id case_PI_BRF_acc_gyr_01/PMP1024_W1_PI_1.csv \
 --cases-folder /home/miguel/git/uniovi/simur/uniovi-simur-wearablepermed-predictor/data/output \
@@ -74,9 +96,17 @@ simuruo/wearablepermed-predictor:1.18.0 \
 
 These arguments are used if you select Python Package or Docker containers to execute predictor command:
 
-- **models-folder (*)**: The root models folder.
+- **model-type**: The model type: esann, capture24, randomforest, xgboost.
 
-- **model-id (*)**: The model id to be load. Possible values are: [MODEL_PI_RF_ACC_GYR_15, MODEL_M_RF_ACC_GYR_15, MODEL_C_RF_ACC_GYR_15, MODEL_PI_RF_ACC_GYR_4, MODEL_M_RF_ACC_GYR_4, MODEL_C_RF_ACC_GYR_4. Example: MODEL_PI_RF_ACC_GYR_15].
+- **sensor-channe**: The model channels trained: accelerometer, accelerometer_gyroscope.
+
+- **class-type**: The model class type trained: classes_4, classes_15.
+
+- **segment-body (*)**: The model segment body trained: thigh, wrist, hip.
+
+- **model-file**: if you want use your custom model set the model file
+
+- **label-file**: if you want use your custom labels set the label file
 
 - **resources-folder (*)**: The root resourcers folder.
 

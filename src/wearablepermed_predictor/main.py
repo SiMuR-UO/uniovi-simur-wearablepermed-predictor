@@ -79,7 +79,6 @@ def parse_args(args):
     parser.add_argument(
         '-model-type',
         '--model-type',
-        required=True,
         dest="model_type",    
         choices=[m.name for m in ML_Model],        
         help=f"The Model Type. Choose from: {', '.join([m.name for m in ML_Model])}"        
@@ -87,7 +86,6 @@ def parse_args(args):
     parser.add_argument(
         '-sensor-channel',
         '--sensor-channel',
-        required=True,
         dest="sensor_channel",    
         choices=[m.name for m in Channel],        
         help=f"The Sensor Channels. Choose from: {', '.join([m.name for m in Channel])}"        
@@ -103,7 +101,6 @@ def parse_args(args):
     parser.add_argument(
         '-class-type',
         '--class-type',
-        required=True,
         dest="class_type",    
         choices=[m.name for m in Class_Type],        
         help=f"The Class Type. Choose from: {', '.join([m.name for m in Class_Type])}"        
