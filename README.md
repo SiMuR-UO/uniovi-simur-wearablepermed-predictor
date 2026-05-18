@@ -59,6 +59,7 @@ $ predictor \
 ```
 
 If you want to use your custom models must execute a command like this:
+
 ```bash
 $ predictor \
 --model_file /home/miguel/git/uniovi/simur/uniovi-simur-wearablepermed-predictor/models/RandomForest.pkl,
