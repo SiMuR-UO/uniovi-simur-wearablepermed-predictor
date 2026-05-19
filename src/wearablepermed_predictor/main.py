@@ -222,14 +222,14 @@ def load_labels(label_file):
 
         raise Exception(f"Labels not found for type {label_file}.")
 
-def predict_by_resource(segment_body, resource_id, model_type, model_id, predictor_label_encoder): 
+def predict_by_resource(segment_body, resource_id, model_type, model_id, sensor_channel, predictor_label_encoder): 
     # the utils package use capitalize segment bodies
     segment_body_capitalized = [s.capitalize() for s in segment_body]
 
     if (ML_Model.randomforest.name == model_type or ML_Model.xgboost.name == model_type):
-        predictions = predictor_characteristics.predict(segment_body_capitalized, resource_id, model_type, model_id, predictor_label_encoder)
+        predictions = predictor_characteristics.predict(segment_body_capitalized, resource_id, model_type, model_id, sensor_channel, predictor_label_encoder)
     else:
-        predictions = predictor_convolutional.predict(segment_body_capitalized, resource_id, model_id, predictor_label_encoder)
+        predictions = predictor_convolutional.predict(segment_body_capitalized, resource_id, model_id, sensor_channel, predictor_label_encoder)
 
     return predictions
 
@@ -322,7 +322,7 @@ def main(args):
         # STEP03: get predictions from resource id
         _logger.info(f"STEP03: Get predictions from model type {model_id}")
         
-        predictions = predict_by_resource([segment_body], resource_path, model_type, model_predictor, model_labels)
+        predictions = predict_by_resource([segment_body], resource_path, model_type, model_predictor, sensor_channel, model_labels)
 
         _logger.info(f"Prediction for a total of: {str(len(predictions))} items")
 

@@ -10,7 +10,7 @@ _logger = logging.getLogger(__name__)
 WINDOW_SIZE = 250
 WINDOW_OVERLAPPING = 0.5
 
-def predict(segment_body, resource_id_file, model_type, model_id, predictor_label_encoder=None):
+def predict(segment_body, resource_id_file, model_type, model_id, sensor_channel, predictor_label_encoder=None):
     try:
         # 1 Load IMU data based on the segment (csv files)
         data_imu = load_WPM_data(resource_id_file, segment_body[0])
@@ -18,7 +18,11 @@ def predict(segment_body, resource_id_file, model_type, model_id, predictor_labe
         _logger.info(f"Resource id {resource_id_file} for segment body {segment_body[0]} loaded")
 
         # 2 windowed temporal series
-        activity_data = data_imu[:,1:7]
+        if Channel.accelerometer.name == sensor_channel:
+            activity_data = data_imu[:,1:4]
+        else:
+            activity_data = data_imu[:,1:7]
+            
         activity_timestamp = data_imu[:,0]
 
         window_size_samples = 250
